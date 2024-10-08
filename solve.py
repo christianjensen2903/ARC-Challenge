@@ -17,7 +17,7 @@ def load_data() -> tuple[dict, dict]:
 challenges, solutions = load_data()
 
 
-def test(example_id: str):
+def test(example_id: str, verbose: bool = True) -> bool:
 
     examples = challenges[example_id]["train"]
     solution = {
@@ -77,11 +77,25 @@ C |1|3|
     prediction = response.split("Prediction:")[1].strip().strip("```")
     prediction_grid = preprocessing.parse_ascii_grid(prediction)
     solution_grid = np.array(solution["output"])
-    print(preprocessing.grid_to_ascii(solution_grid))
+    if verbose:
+        print(prompt)
+        print(response)
+        print(preprocessing.grid_to_ascii(solution_grid))
+
     if prediction_grid.shape != solution_grid.shape:
-        print("The shape of the prediction grid is incorrect")
-    else:
-        print((prediction_grid == solution_grid).all())
+        return False
+    return (prediction_grid == solution_grid).all()
 
 
-test(example_id="0520fde7")
+# test(example_id="045e512c")
+
+n = 20
+correct = 0
+for example_id in list(challenges.keys())[:n]:
+    try:
+        if test(example_id, verbose=False):
+            correct += 1
+    except Exception as e:
+        print(f"Error: {e}")
+
+print(f"Accuracy: {correct}/{n}")
