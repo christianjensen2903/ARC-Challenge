@@ -76,7 +76,10 @@ def grid_to_ascii(grid: np.ndarray) -> str:
     ]
     grid_str = "   " + " ".join(alphabet[:width]) + "\n"
     for i, row in enumerate(grid):
-        ascii_row = f"{alphabet[i]} |" + "|".join([str(value) for value in row]) + "|"
+        ascii_row = f"{alphabet[i]} |"
+        for value in row:
+            char = value if value > 0 else " "
+            ascii_row += f"{char}|"
         grid_str += ascii_row + "\n"
 
     return grid_str
@@ -84,8 +87,14 @@ def grid_to_ascii(grid: np.ndarray) -> str:
 
 def parse_ascii_grid(grid: str) -> np.ndarray:
     grid = grid.strip().split("\n")
-    grid = [[int(num) for num in row[3:-1].split("|")] for row in grid[1:]]
-    return np.array(grid)
+    result = []
+    for row in grid[1:]:
+        for value in row[3:-1].split("|"):
+            if value == " ":
+                result.append(0)
+            else:
+                result.append(int(value))
+    return np.array(result)
 
 
 def find_contiguous_shapes(grid):
