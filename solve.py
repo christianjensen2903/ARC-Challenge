@@ -2,6 +2,7 @@ from generate_text import GPT4
 import preprocessing
 import json
 import numpy as np
+import traceback
 
 
 def load_data() -> tuple[dict, dict]:
@@ -72,8 +73,6 @@ C |1|3|
 
     model = GPT4()
     response = model.generate(prompt)
-    print(prompt)
-    print(response)
     prediction = response.split("Prediction:")[1].strip().strip("```")
     prediction_grid = preprocessing.parse_ascii_grid(prediction)
     solution_grid = np.array(solution["output"])
@@ -87,7 +86,7 @@ C |1|3|
     return (prediction_grid == solution_grid).all()
 
 
-# test(example_id="045e512c")
+# test(example_id="0520fde7")
 
 n = 20
 correct = 0
@@ -96,6 +95,7 @@ for example_id in list(challenges.keys())[:n]:
         if test(example_id, verbose=False):
             correct += 1
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error in example {example_id}")
+        traceback.print_exc()
 
 print(f"Accuracy: {correct}/{n}")
