@@ -2,12 +2,19 @@ from scipy.ndimage import label
 import numpy as np
 
 letter_lookup = {
-    0: " ",
-    1: "R",  # Red
-    2: "G",  # Green
-    3: "B",  # Blue
-    4: "Y",  # Yellow
+    0: " ",  # Black
+    1: "A",  # Red
+    2: "B",  # Green
+    3: "C",  # Blue
+    4: "D",  # Yellow
+    5: "E",  # Purple
+    6: "F",  # Cyan
+    7: "G",  # Orange
+    8: "H",  # Pink
+    9: "I",  # Brown
 }
+
+index_lookup = {value: key for key, value in letter_lookup.items()}
 
 rgb_lookup = {
     0: (0, 0, 0),  # Black
@@ -15,9 +22,12 @@ rgb_lookup = {
     2: (46, 204, 64),  # Green
     3: (0, 116, 217),  # Blue
     4: (255, 220, 0),  # Yellow
+    5: (170, 170, 170),  # Purple
+    6: (255, 133, 27),  # Cyan
+    7: (255, 65, 54),  # Orange
+    8: (255, 0, 220),  # Pink
+    9: (133, 20, 75),  # Brown
 }
-
-from matplotlib import pyplot as plt
 
 
 def replace_with_colors(grid: np.ndarray) -> np.ndarray:
@@ -25,19 +35,57 @@ def replace_with_colors(grid: np.ndarray) -> np.ndarray:
 
 
 # Function to reduce the color scheme to a smaller set of colors
-def reduce_colors(grid: np.ndarray) -> np.ndarray:
-    unique_colors = np.unique(grid)
-    color_mapping = {color: i for i, color in enumerate(unique_colors)}
+def reduce_colors(
+    grid: np.ndarray, color_mapping: dict[int, int] | None = None
+) -> np.ndarray:
+    if not color_mapping:
+        unique_colors = np.unique(grid)
+        color_mapping = {color: i for i, color in enumerate(unique_colors)}
     return np.vectorize(color_mapping.get)(grid)
 
 
 def grid_to_ascii(grid: np.ndarray) -> str:
-    grid_str = ""
-    for row in grid:
-        ascii_row = "|".join([letter_lookup[value] for value in row])
+    height, width = grid.shape
+    alphabet = [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+    ]
+    grid_str = "   " + " ".join(alphabet[:width]) + "\n"
+    for i, row in enumerate(grid):
+        ascii_row = f"{alphabet[i]} |" + "|".join([str(value) for value in row]) + "|"
         grid_str += ascii_row + "\n"
 
     return grid_str
+
+
+def parse_ascii_grid(grid: str) -> np.ndarray:
+    grid = grid.strip().split("\n")
+    grid = [[int(num) for num in row[3:-1].split("|")] for row in grid[1:]]
+    return np.array(grid)
 
 
 def find_contiguous_shapes(grid):

@@ -1,0 +1,8 @@
+matplotlib==3.9.2
+numpy==2.1.2
+openai==1.51.1
+scipy==1.14.1
+tqdm==4.66.5
+transformers==4.45.2
+bitsandbytes==0.42.0
+python-dotenv==1.0.1
