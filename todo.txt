@@ -1,3 +1,2 @@
-
-1. Make shape extractor that is not based on LLMs
 2. Try to use lists instead. It seems terrible at understanding positions
+3. Don't do complex observations for all. Keep that to the reasoning

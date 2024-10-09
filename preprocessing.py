@@ -55,7 +55,7 @@ def reduce_colors(
     return np.vectorize(color_mapping.get)(grid)
 
 
-def grid_to_ascii(grid: np.ndarray) -> str:
+def grid_to_ascii(grid: np.ndarray, min_row: int = 0, min_col: int = 0) -> str:
     height, width = grid.shape
     alphabet = [
         "A",
@@ -85,9 +85,13 @@ def grid_to_ascii(grid: np.ndarray) -> str:
         "Y",
         "Z",
     ]
-    grid_str = "   " + " ".join(alphabet[:width]) + "\n"
+
+    # Adjust for min_col in the header
+    grid_str = "   " + " ".join(alphabet[min_col : min_col + width]) + "\n"
+
     for i, row in enumerate(grid):
-        ascii_row = f"{alphabet[i]} |"
+        # Adjust for min_row in the row label
+        ascii_row = f"{alphabet[min_row + i]} |"
         for value in row:
             char = value if value > 0 else " "
             ascii_row += f"{char}|"
@@ -106,23 +110,3 @@ def parse_ascii_grid(grid: str) -> np.ndarray:
             else:
                 result.append(int(value))
     return np.array(result)
-
-
-def find_contiguous_shapes(grid):
-    # Structure is to define the neighborhood for connected components
-    labeled_array, num_features = label(grid > 0, structure=np.ones((3, 3)))
-    shape_grids = []
-    for shape_label in range(1, num_features + 1):
-        shape_mask = labeled_array == shape_label
-
-        # Find the bounding box of the shape
-        rows, cols = np.where(shape_mask)
-        min_row, max_row = rows.min(), rows.max()
-        min_col, max_col = cols.min(), cols.max()
-
-        # Extract the sub-grid containing the shape, cropping to the bounding box
-        shape_grid = grid[min_row : max_row + 1, min_col : max_col + 1]
-
-        shape_grids.append(shape_grid)
-
-    return shape_grids
