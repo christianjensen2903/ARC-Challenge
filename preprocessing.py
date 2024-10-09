@@ -1,5 +1,6 @@
 from scipy.ndimage import label
 import numpy as np
+import json
 
 letter_lookup = {
     0: " ",  # Black
@@ -28,6 +29,16 @@ rgb_lookup = {
     8: (255, 0, 220),  # Pink
     9: (133, 20, 75),  # Brown
 }
+
+
+def load_data() -> tuple[dict, dict]:
+    with open("data/arc-agi_training_challenges.json") as f:
+        challenges = json.load(f)
+
+    with open("data/arc-agi_training_solutions.json") as f:
+        solutions = json.load(f)
+
+    return challenges, solutions
 
 
 def replace_with_colors(grid: np.ndarray) -> np.ndarray:
