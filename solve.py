@@ -58,19 +58,14 @@ def test(example_id: str, verbose: bool = True) -> bool:
 Positions are denonated x.y where the x is the column letter and y is the row letter.
 A square is denoted by x.y-x.y where the first part is the top left corner and the second part is the bottom right corner.
 
-Your task is to predict the output grid given the input grid.
+Your task is to state a property of the pattern that transforms the input grid to the output grid.
 To do this your are shown a series of examples which you can use to learn the pattern.
 You are also shown some shapes that can be found in the input and output grids.
 
-The workflow is as follows:
-1. Reasoning about the pattern in general
-2. Reasoning about applying the pattern to the input grid
-
-
-First reason about how the input is transformed to the output given the examples and the observations.
-You should verify that the reasoning holds for all the examples.
-
-Then apply this reasoning to the input grid.
+First make some observations about the examples and the shapes.
+Then reason about the pattern and decide on a property that holds for all the examples.
+You should be very precise in your property. Not vague and say it just changes position. But where to or how it changes.
+Only state one property. It doesn't need to capture the whole pattern but just a part of it.
 
 You are given these examples to learn the pattern.
 {example_prompt}
@@ -78,39 +73,66 @@ You are given these examples to learn the pattern.
 Where the following shapes are found in the input and output grids:
 {observations}
 
-Make your observations and reason about the pattern in general and apply the pattern to following input grid:
-{input_grid}
-
-When you are ready to make a prediction, please write "Prediction:" followed by the ASCII representation of the output grid.
-ONLY write "Prediction:" once.
-Example of output:
-Reasoning about pattern in general:
+When you are ready to state a property, please write "Property:" followed by the ASCII representation of the output grid.
+ONLY write "Property:" once.
+Observations:
 ...
 
-Reasoning about applying pattern to input:
+Reasoning:
 ...
 
-Prediction:
-   A B
-A | | | 
-B | | |
-C |1|3|
+Property:
+The shapes of 5s rotate 90 degrees clockwise.
     """
 
     model = GPT4()
     response = model.generate(prompt)
 
-    prediction = response.split("Prediction:")[1].strip()
-    prediction_grid = preprocessing.parse_ascii_grid(prediction)
-    solution_grid = np.array(solution["output"])
-    if verbose:
-        print(prompt)
-        print(response)
-        print(preprocessing.grid_to_ascii(solution_grid))
+    property = response.split("Property:")[1].strip()
+    print(prompt)
+    print(response)
+    holds = True
+    for i, example in enumerate(examples):
+        input_grid = np.array(example["input"])
+        output_grid = np.array(example["output"])
+        input_ascii = preprocessing.grid_to_ascii(input_grid)
+        output_ascii = preprocessing.grid_to_ascii(output_grid)
+        property_prompt = f"""
+Based on this property
+{property}
 
-    if prediction_grid.shape != solution_grid.shape:
-        return False
-    return (prediction_grid == solution_grid).all()
+Predict the output grid for the following input grid:
+{input_ascii} 
+
+Only output the ASCII representation of the grid and nothing else.
+Example:
+   A B
+A | | | 
+B | | |
+C |1|3|
+"""
+        response = model.generate(property_prompt).lower()
+        print(response)
+        print(output_ascii)
+        prediction = preprocessing.parse_ascii_grid(response)
+
+        if prediction.shape != output_grid.shape:
+            holds = False
+            break
+        if not (prediction == output_grid).all():
+            holds = False
+            break
+
+    # prediction_grid = preprocessing.parse_ascii_grid(prediction)
+    # solution_grid = np.array(solution["output"])
+    # if verbose:
+    #     print(prompt)
+    #     print(response)
+    #     print(preprocessing.grid_to_ascii(solution_grid))
+
+    # if prediction_grid.shape != solution_grid.shape:
+    #     return False
+    # return (prediction_grid == solution_grid).all()
 
 
 test(example_id="05f2a901")

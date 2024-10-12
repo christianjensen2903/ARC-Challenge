@@ -1,2 +1,1 @@
 2. Try to use lists instead. It seems terrible at understanding positions
-3. Don't do complex observations for all. Keep that to the reasoning
