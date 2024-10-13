@@ -1,13 +1,11 @@
-from generate_text import GPT4
-from example_converter import ExampleConverter
 import preprocessing
-from scipy.ndimage import label
+from scipy.ndimage import label  # type: ignore
 import numpy as np
 
 
 class ObservationExtractor:
 
-    def find_contiguous_shapes(self, grid: np.ndarray, mask: np.ndarray = None):
+    def find_contiguous_shapes(self, grid: np.ndarray, mask: np.ndarray | None = None):
         # Structure is to define the neighborhood for connected components
         labeled_array, num_features = label(mask, structure=np.ones((3, 3)))
         shapes_with_positions = []

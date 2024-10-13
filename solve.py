@@ -32,33 +32,35 @@ def test(example_id: str, verbose: bool = True) -> bool:
         input_grid = np.array(example["input"])
         output_grid = np.array(example["output"])
 
-        input_grid = preprocessing.grid_to_ascii(input_grid)
-        output_grid = preprocessing.grid_to_ascii(output_grid)
+        input_ascii = preprocessing.grid_to_ascii(input_grid)
+        output_ascii = preprocessing.grid_to_ascii(output_grid)
 
-        return input_grid, output_grid
+        return input_ascii, output_ascii
 
     ascii_examples = []
     for example in examples:
-        input_grid, output_grid = convert_example_to_ascii(example)
-        ascii_examples.append((input_grid, output_grid))
+        input_ascii, output_ascii = convert_example_to_ascii(example)
+        ascii_examples.append((input_ascii, output_ascii))
 
     example_prompt = ""
-    for i, (input_grid, output_grid) in enumerate(ascii_examples):
+    for i, (input_ascii, output_ascii) in enumerate(ascii_examples):
         example_prompt += (
-            f"Example {i+1}: \nInput: \n{input_grid} \nOutput: \n{output_grid}\n\n"
+            f"Example {i+1}: \nInput: \n{input_ascii} \nOutput: \n{output_ascii}\n\n"
         )
 
     extractor = ObservationExtractor()
     observations = extractor.extract(examples)
 
     input_grid = np.array(solution["input"])
-    input_grid = preprocessing.grid_to_ascii(input_grid)
+    input_ascii = preprocessing.grid_to_ascii(input_grid)
 
+    # TODO: Try self correcting. Where it reasons. Then another agent tries to apply the reasoning to the examples.
+    # The errors are given to the agent where it then haves to correct the reasoning
     prompt = f"""
 Positions are denonated x.y where the x is the column letter and y is the row letter.
 A square is denoted by x.y-x.y where the first part is the top left corner and the second part is the bottom right corner.
 
-Your task is to state a property of the pattern that transforms the input grid to the output grid.
+Your task is to learn a pattern that transforms the input grid to the output grid.
 To do this your are shown a series of examples which you can use to learn the pattern.
 You are also shown some shapes that can be found in the input and output grids.
 
@@ -122,6 +124,8 @@ C |1|3|
         if not (prediction == output_grid).all():
             holds = False
             break
+
+    return False
 
     # prediction_grid = preprocessing.parse_ascii_grid(prediction)
     # solution_grid = np.array(solution["output"])

@@ -9,10 +9,10 @@ class ExampleConverter:
         input_grid = np.array(example["input"])
         output_grid = np.array(example["output"])
 
-        input_grid = preprocessing.grid_to_ascii(input_grid)
-        output_grid = preprocessing.grid_to_ascii(output_grid)
+        input_ascii = preprocessing.grid_to_ascii(input_grid)
+        output_ascii = preprocessing.grid_to_ascii(output_grid)
 
-        return input_grid, output_grid
+        return input_ascii, output_ascii
 
     def extract(self, examples: list[dict[str, list]]) -> str:
         ascii_examples = []

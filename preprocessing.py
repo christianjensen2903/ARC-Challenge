@@ -1,4 +1,3 @@
-from scipy.ndimage import label
 import numpy as np
 import json
 
@@ -101,9 +100,9 @@ def grid_to_ascii(grid: np.ndarray, min_row: int = 0, min_col: int = 0) -> str:
 
 
 def parse_ascii_grid(grid: str) -> np.ndarray:
-    grid = grid.strip().split("\n")
+    grid_list = grid.strip().split("\n")
     result = []
-    for row in grid[1:]:
+    for row in grid_list[1:]:
         for value in row[3:-1].split("|"):
             if value == " ":
                 result.append(0)
