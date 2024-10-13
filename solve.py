@@ -108,12 +108,12 @@ Predict the output grid for the following input grid:
 
 Only output the ASCII representation of the grid and nothing else.
 Example:
-   A B
-A | | | 
-B | | |
-C |1|3|
+    A  B
+1  |  |  | 
+2  |  |  |
+3  |🔴|⚪️|
 """
-        response = model.generate(property_prompt).lower()
+        response = model.generate(property_prompt)
         print(response)
         print(output_ascii)
         prediction = preprocessing.parse_ascii_grid(response)
