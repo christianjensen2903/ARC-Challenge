@@ -3,7 +3,6 @@ import dotenv
 from langchain_openai import ChatOpenAI
 import json
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
-from example_converter import ExampleConverter
 import logging
 from demonstration_formatter import (
     Demonstration,
@@ -83,5 +82,6 @@ class ARCSolver:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     solver = ARCSolver(EmojisDemonstrations())
     print(solver.solve("05f2a901"))
