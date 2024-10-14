@@ -2,7 +2,6 @@ from langgraph.graph import END, START, Graph
 import dotenv
 from langchain_openai import ChatOpenAI
 import json
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
 import logging
 from demonstration_formatter import (
     Demonstration,
@@ -11,7 +10,6 @@ from demonstration_formatter import (
     ShapeExtractionWrapper,
     DifferenceWrapper,
 )
-from langchain_core.language_models.chat_models import BaseChatModel
 import numpy as np
 from solver import Solver, IOSolver
 
@@ -39,12 +37,10 @@ class Pipeline:
     def _create_graph(self):
         graph = Graph()
         graph.add_node("load", self.load_demonstrations)
-        graph.add_node("format", self.format_demonstrations)
         graph.add_node("agent", self.call_model)
 
         graph.add_edge(START, "load")
-        graph.add_edge("load", "format")
-        graph.add_edge("format", "agent")
+        graph.add_edge("load", "agent")
         graph.add_edge("agent", END)
         return graph.compile()
 
@@ -60,14 +56,9 @@ class Pipeline:
         ]
         return demonstrations
 
-    def format_demonstrations(self, demonstrations: list[Demonstration]) -> str:
-        logging.info("Formatting demonstrations")
-        formatted_demonstrations = self.demonstration_formatter.format(demonstrations)
-        return formatted_demonstrations
-
-    def call_model(self, formatted_demonstrations: str) -> str:
+    def call_model(self, demonstrations: list[Demonstration]) -> str:
         logging.info("Calling model")
-        return self.solver.solve(formatted_demonstrations)
+        return self.solver.solve(demonstrations)
 
     def solve(self, id: str) -> str:
         final_state = self.graph.invoke(id)
@@ -77,8 +68,8 @@ class Pipeline:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    solver = IOSolver(model)
     formatter = EmojisDemonstrations()
+    solver = IOSolver(model, formatter=formatter)
 
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
     print(pipeline.solve("05f2a901"))

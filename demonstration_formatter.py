@@ -30,6 +30,10 @@ class DemonstrationFormatter(ABC):
     def format(self, demonstrations: list[Demonstration]) -> str:
         pass
 
+    @abstractmethod
+    def get_description(self, demonstrations: list[Demonstration]) -> str:
+        pass
+
 
 class RawDemonstrations(DemonstrationFormatter):
 
@@ -45,6 +49,9 @@ class RawDemonstrations(DemonstrationFormatter):
         return "\n".join(
             [json.dumps(demonstration) for demonstration in demonstrations]
         )
+
+    def get_description(self, demonstrations: list[Demonstration]) -> str:
+        return ""
 
 
 class EmojisDemonstrations(DemonstrationFormatter):
@@ -104,6 +111,20 @@ class EmojisDemonstrations(DemonstrationFormatter):
 
         return formatted_demonstrations
 
+    def get_description(self, demonstrations: list[Demonstration]) -> str:
+        return f"""
+The inputs and outputs are each "grids". A grid is a rectangular matrix of integers between 0 and 9 (inclusive).
+These grids will be shown to you in text format using emojis.
+
+To represent the integers in the grid, we use emojis. The mapping is as follows:
+{self.letter_lookup}.
+All 0s are shown as spaces as these represent empty locations.
+The elements of the grid are separated by '|'.
+
+Locations are denoted like A7 or D3, where columns are denoted with A, B, C, etc. and rows are denoted with 1, 2, 3, etc.
+So, D3 corresponds to the cell in the 4th column and the 3rd row. Note that rows are 1-indexed.
+"""
+
 
 class ASCIIDemonstrations(DemonstrationFormatter):
     """
@@ -136,6 +157,18 @@ class ASCIIDemonstrations(DemonstrationFormatter):
             formatted_demonstrations += self.grid_to_text(demonstration.output) + "\n"
 
         return formatted_demonstrations
+
+    def get_description(self, demonstrations: list[Demonstration]) -> str:
+        return """
+The inputs and outputs are each "grids". A grid is a rectangular matrix of integers between 0 and 9 (inclusive).
+These grids will be shown to you as an ASCII representation.
+
+The elements of the grid are separated by '|'.
+All 0s are shown as spaces as these represent empty locations.
+
+Locations are denoted like A7 or D3, where columns are denoted with A, B, C, etc. and rows are denoted with 1, 2, 3, etc.
+So, D3 corresponds to the cell in the 4th column and the 3rd row. Note that rows are 1-indexed.
+"""
 
 
 class ShapeExtractionWrapper(DemonstrationFormatter):
@@ -203,6 +236,26 @@ class ShapeExtractionWrapper(DemonstrationFormatter):
             formatted_demonstrations += "\n"
 
         return formatted_demonstrations
+
+    def get_description(self, demonstrations: list[Demonstration]) -> str:
+        prompt_extension = self.formatter.get_description(demonstrations)
+        for demonstration in demonstrations:
+            if not self._few_shapes(demonstration.input, demonstration.output):
+                return prompt_extension
+        prompt_extension += """
+In addition to the grids, you will be shown the shapes in the input and output.
+A shape can both be a contiguous region of a single color, or a mix of multiple colors.
+We will also not show you any shapes consisting of less than 2 cells to save on space.
+We will also not show you shapes that are identical to the whole grid as these are trivially easy to detect.
+
+We will show you the shapes in a "normalized" form.
+This shows the shape with the coordinates shifted such that the minimum row/column of the shape is row 1 and column A.
+This is useful for tasks like noticing identical shapes (in different positions with different colors).
+
+Apart from that the shapes are shown similar to the grids, with the elements separated by '|'.
+"""
+
+        return prompt_extension
 
 
 class DifferenceWrapper(DemonstrationFormatter):
@@ -299,6 +352,21 @@ class DifferenceWrapper(DemonstrationFormatter):
             formatted_demonstrations += "\n"
 
         return formatted_demonstrations
+
+    def get_description(self, demonstrations: list[Demonstration]) -> str:
+        prompt_extension = self.formatter.get_description(demonstrations)
+        for demonstration in demonstrations:
+            if not self._diff_is_small(demonstration.input, demonstration.output):
+                return prompt_extension
+
+        prompt_extension += """
+In addition to the grids, you will be shown the color changes between the input grid and the output grid
+
+This shows the difference between an input grid and an output grid as a list of the locations where one color changes to another.
+For instance, if element1 changes to element2 at A1 A2 B7, this would be represented as "element1 to element2 at A1 A2 B7".
+"""
+
+        return prompt_extension
 
 
 if __name__ == "__main__":

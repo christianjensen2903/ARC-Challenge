@@ -1,21 +1,19 @@
-from langgraph.graph import END, START, Graph
-import dotenv
-from langchain_openai import ChatOpenAI
-import json
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
-import logging
-
 from abc import ABC, abstractmethod
 from langchain_core.language_models.chat_models import BaseChatModel
+from base_prompt import BasePromptBuilder
+from demonstration_formatter import Demonstration, DemonstrationFormatter
 
 
 class Solver(ABC):
 
-    def __init__(self, model: BaseChatModel):
+    def __init__(self, model: BaseChatModel, formatter: DemonstrationFormatter):
         self.model = model
+        self.formatter = formatter
+        self.base_prompt_builder = BasePromptBuilder(formatter)
 
     @abstractmethod
-    def solve(self, formatted_demonstrations: str) -> str:
+    def solve(self, demonstrations: list[Demonstration]) -> str:
         pass
 
     def generate(self, prompt: str, system_prompt: str | None = None) -> str:
@@ -31,10 +29,13 @@ class Solver(ABC):
 
 
 class IOSolver(Solver):
-    def solve(self, formatted_demonstrations: str) -> str:
-        prompt = f"""
-You are a helpful assistant that solves the demonstrations.
+    def solve(self, demonstrations: list[Demonstration]) -> str:
+        formatted_demonstrations = self.formatter.format(demonstrations)
+        system_prompt = self.base_prompt_builder.build(demonstrations)
 
+        prompt = f"""
+Please solve the following puzzle.
 {formatted_demonstrations}
 """
-        return self.generate(formatted_demonstrations, system_prompt=prompt)
+
+        return self.generate(prompt, system_prompt=system_prompt)
