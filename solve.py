@@ -3,7 +3,7 @@ import preprocessing
 import json
 import numpy as np
 import traceback
-from observation_extractor import ShapeExtractor
+from shape_extractor import ShapeExtractor
 from demonstrations import demonstrations
 
 
