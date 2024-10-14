@@ -26,7 +26,7 @@ def load_data() -> tuple[dict, dict]:
     return challenges, solutions
 
 
-class ARCSolver:
+class Pipeline:
 
     def __init__(self, demonstration_formatter: DemonstrationFormatter):
         self.demonstration_formatter = demonstration_formatter
@@ -83,5 +83,5 @@ class ARCSolver:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    solver = ARCSolver(EmojisDemonstrations())
+    solver = Pipeline(EmojisDemonstrations())
     print(solver.solve("05f2a901"))
