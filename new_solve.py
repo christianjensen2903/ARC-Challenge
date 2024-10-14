@@ -5,7 +5,14 @@ import json
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
 from example_converter import ExampleConverter
 import logging
-
+from demonstration_formatter import (
+    Demonstration,
+    DemonstrationFormatter,
+    EmojisDemonstrations,
+    ShapeExtractionWrapper,
+    DifferenceWrapper,
+)
+import numpy as np
 
 dotenv.load_dotenv()
 
@@ -20,49 +27,61 @@ def load_data() -> tuple[dict, dict]:
     return challenges, solutions
 
 
-challenges, solutions = load_data()
+class ARCSolver:
 
+    def __init__(self, demonstration_formatter: DemonstrationFormatter):
+        self.demonstration_formatter = demonstration_formatter
+        self.model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        self.challenges, self.solutions = load_data()
 
-model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        self.graph = self._create_graph()
 
+    def _create_graph(self):
+        graph = Graph()
+        graph.add_node("load", self.load_demonstrations)
+        graph.add_node("format", self.format_demonstrations)
+        graph.add_node("agent", self.call_model)
 
-def load_demonstrations(id: str) -> list[dict]:
-    logging.info(f"Loading demonstrations for {id}")
-    demonstrations = challenges[id]["train"]
-    return demonstrations
+        graph.add_edge(START, "load")
+        graph.add_edge("load", "format")
+        graph.add_edge("format", "agent")
+        graph.add_edge("agent", END)
+        return graph.compile()
 
-
-def format_demonstrations(demonstrations: list[dict]) -> str:
-    logging.info("Formatting demonstrations")
-    example_converter = ExampleConverter()
-    return example_converter.extract(demonstrations)
-
-
-def call_model(formatted_demonstrations: str) -> BaseMessage:
-    logging.info("Calling model")
-    response = model.invoke(
-        [
-            SystemMessage(
-                content="You are a helpful assistant that extracts the pattern from the demonstrations."
-            ),
-            HumanMessage(content=formatted_demonstrations),
+    def load_demonstrations(self, id: str) -> list[Demonstration]:
+        logging.info(f"Loading demonstrations for {id}")
+        demonstrations_json = self.challenges[id]["train"]
+        demonstrations = [
+            Demonstration(
+                input=np.array(demonstration["input"]),
+                output=np.array(demonstration["output"]),
+            )
+            for demonstration in demonstrations_json
         ]
-    )
-    return response
+        return demonstrations
 
+    def format_demonstrations(self, demonstrations: list[Demonstration]) -> str:
+        logging.info("Formatting demonstrations")
+        formatted_demonstrations = self.demonstration_formatter.format(demonstrations)
+        return formatted_demonstrations
 
-workflow = Graph()
-workflow.add_node("load", load_demonstrations)
-workflow.add_node("format", format_demonstrations)
-workflow.add_node("agent", call_model)
+    def call_model(self, formatted_demonstrations: str) -> BaseMessage:
+        logging.info("Calling model")
+        response = self.model.invoke(
+            [
+                SystemMessage(
+                    content="You are a helpful assistant that solves the demonstrations."
+                ),
+                HumanMessage(content=formatted_demonstrations),
+            ]
+        )
+        return response
 
-workflow.add_edge(START, "load")
-workflow.add_edge("load", "format")
-workflow.add_edge("format", "agent")
-workflow.add_edge("agent", END)
+    def solve(self, id: str) -> str:
+        final_state = self.graph.invoke(id)
+        return final_state
 
-app = workflow.compile()
 
 if __name__ == "__main__":
-    final_state = app.invoke("05f2a901")
-    print(final_state)
+    solver = ARCSolver(EmojisDemonstrations())
+    print(solver.solve("05f2a901"))

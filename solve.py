@@ -3,7 +3,7 @@ import preprocessing
 import json
 import numpy as np
 import traceback
-from observation_extractor import ObservationExtractor
+from observation_extractor import ShapeExtractor
 from demonstrations import demonstrations
 
 
@@ -48,7 +48,7 @@ def format_examples(examples: list[dict]) -> str:
 
 def test(example_id: str, k: int = 2, n: int = 3, verbose: bool = True) -> bool:
 
-    extractor = ObservationExtractor()
+    extractor = ShapeExtractor()
     model = GPT4()
 
     examples = challenges[example_id]["train"]
