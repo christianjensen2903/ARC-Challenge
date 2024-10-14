@@ -11,7 +11,9 @@ from demonstration_formatter import (
     ShapeExtractionWrapper,
     DifferenceWrapper,
 )
+from langchain_core.language_models.chat_models import BaseChatModel
 import numpy as np
+from solver import Solver, IOSolver
 
 dotenv.load_dotenv()
 
@@ -28,11 +30,10 @@ def load_data() -> tuple[dict, dict]:
 
 class Pipeline:
 
-    def __init__(self, demonstration_formatter: DemonstrationFormatter):
+    def __init__(self, demonstration_formatter: DemonstrationFormatter, solver: Solver):
         self.demonstration_formatter = demonstration_formatter
-        self.model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        self.solver = solver
         self.challenges, self.solutions = load_data()
-
         self.graph = self._create_graph()
 
     def _create_graph(self):
@@ -64,17 +65,9 @@ class Pipeline:
         formatted_demonstrations = self.demonstration_formatter.format(demonstrations)
         return formatted_demonstrations
 
-    def call_model(self, formatted_demonstrations: str) -> BaseMessage:
+    def call_model(self, formatted_demonstrations: str) -> str:
         logging.info("Calling model")
-        response = self.model.invoke(
-            [
-                SystemMessage(
-                    content="You are a helpful assistant that solves the demonstrations."
-                ),
-                HumanMessage(content=formatted_demonstrations),
-            ]
-        )
-        return response
+        return self.solver.solve(formatted_demonstrations)
 
     def solve(self, id: str) -> str:
         final_state = self.graph.invoke(id)
@@ -83,5 +76,9 @@ class Pipeline:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    solver = Pipeline(EmojisDemonstrations())
-    print(solver.solve("05f2a901"))
+    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    solver = IOSolver(model)
+    formatter = EmojisDemonstrations()
+
+    pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
+    print(pipeline.solve("05f2a901"))
