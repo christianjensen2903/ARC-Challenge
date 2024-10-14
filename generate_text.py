@@ -8,6 +8,10 @@ class TextGenerator(ABC):
     def generate(self, prompt: str) -> str:
         pass
 
+    @abstractmethod
+    def generate_from_messages(self, messages: list[dict[str, str]]) -> str:
+        pass
+
 
 class GPT4(TextGenerator):
     def __init__(self):
@@ -15,8 +19,11 @@ class GPT4(TextGenerator):
         self.client = OpenAI()
 
     def generate(self, prompt: str) -> str:
+        return self.generate_from_messages([{"role": "user", "content": prompt}])
+
+    def generate_from_messages(self, messages: list[dict[str, str]]) -> str:
         response = self.client.chat.completions.create(
-            model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}]
+            model="gpt-4o-mini", messages=messages
         )
         return response.choices[0].message.content
 

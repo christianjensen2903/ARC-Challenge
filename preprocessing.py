@@ -2,31 +2,31 @@ import numpy as np
 import json
 
 letter_lookup = {
-    0: "  ",  # Black
+    0: "  ",  # Nothing
     1: "🔴",  # Red
     2: "🟢",  # Green
     3: "🔵",  # Blue
     4: "🟡",  # Yellow
     5: "🟣",  # Purple
-    6: "⚫️",  # Cyan
+    6: "⚫️",  # Black
     7: "🟠",  # Orange
-    8: "⚪️",  # Pink
+    8: "⚪️",  # White
     9: "🟤",  # Brown
 }
 
 index_lookup = {value: key for key, value in letter_lookup.items()}
 
 rgb_lookup = {
-    0: (0, 0, 0),  # Black
-    1: (220, 50, 32),  # Red
-    2: (46, 204, 64),  # Green
-    3: (0, 116, 217),  # Blue
-    4: (255, 220, 0),  # Yellow
-    5: (170, 170, 170),  # Purple
-    6: (255, 133, 27),  # Cyan
-    7: (255, 65, 54),  # Orange
-    8: (255, 0, 220),  # Pink
-    9: (133, 20, 75),  # Brown
+    0: (0, 0, 0),  # Nothing (empty space)
+    1: (255, 0, 0),  # Red (🔴)
+    2: (0, 255, 0),  # Green (🟢)
+    3: (0, 0, 255),  # Blue (🔵)
+    4: (255, 255, 0),  # Yellow (🟡)
+    5: (128, 0, 128),  # Purple (🟣)
+    6: (128, 128, 128),  # Black (⚫️)
+    7: (255, 165, 0),  # Orange (🟠)
+    8: (255, 255, 255),  # White (⚪️)
+    9: (139, 69, 19),  # Brown (🟤)
 }
 
 

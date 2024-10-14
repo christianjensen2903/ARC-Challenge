@@ -27,3 +27,11 @@ class ExampleConverter:
             )
 
         return example_prompt
+
+
+if __name__ == "__main__":
+    converter = ExampleConverter()
+    challenges, solutions = preprocessing.load_data()
+    example_id = "08ed6ac7"
+    examples = challenges[example_id]["train"]
+    print(converter.extract(examples))

@@ -73,6 +73,6 @@ class ObservationExtractor:
 if __name__ == "__main__":
     extractor = ObservationExtractor()
     challenges, solutions = preprocessing.load_data()
-    example_id = "e40b9e2f"
+    example_id = "31aa019c"
     observations = extractor.extract(challenges[example_id]["train"])
     print(observations)
