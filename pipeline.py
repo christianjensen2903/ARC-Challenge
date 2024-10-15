@@ -53,12 +53,10 @@ class Pipeline:
         graph.add_node("load", self._load_demonstrations)
         graph.add_node("agent", self._call_model)
         graph.add_node("run_program", self._run_program)
-        graph.add_node("evaluate", self._evaluate)
         graph.add_edge(START, "load")
         graph.add_edge("load", "agent")
         graph.add_edge("agent", "run_program")
-        graph.add_edge("run_program", "evaluate")
-        graph.add_edge("evaluate", END)
+        graph.add_edge("run_program", END)
         return graph.compile()
 
     def _load_demonstrations(self, id: str) -> list[Demonstration]:
@@ -74,22 +72,30 @@ class Pipeline:
         self.id = id
         return demonstrations
 
-    def _call_model(self, demonstrations: list[Demonstration]) -> str:
+    def _call_model(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
         logging.info("Calling model")
         return self.solver.solve(demonstrations)
 
-    def solve(self, id: str) -> tuple[bool, str, str]:
-        final_state = self.graph.invoke(id)
-        return final_state
+    def solve(self, id: str) -> tuple[np.ndarray, float]:
+        prediction, cost, _, _ = self.graph.invoke(id)
+        return prediction, cost
 
-    def _run_program(self, solution: str) -> tuple[np.ndarray | None, str, str]:
+    def _run_program(
+        self, solution: tuple[str, float]
+    ) -> tuple[np.ndarray, float, str, str]:
+        prediction, cost = solution
         logging.info("Running program")
         input = np.array(self.challenges[self.id]["test"][0]["input"])
-        result, stdout, stderr = run_program(solution, input)
+        result, stdout, stderr = run_program(prediction, input)
         logging.info(f"Program output: {result}")
         logging.info(f"Program stdout: {stdout}")
         logging.info(f"Program stderr: {stderr}")
-        return result, stdout, stderr
+
+        # If result is None output the input
+        if result is None:
+            return input, cost, stdout, stderr
+
+        return result, cost, stdout, stderr
 
     def _evaluate(
         self, result: tuple[np.ndarray | None, str, str]
@@ -111,8 +117,22 @@ if __name__ == "__main__":
     formatter = EmojisDemonstrations()
     solver = COTSolver(model, formatter=formatter)
 
+    challenges, solutions = load_data()
+    id = "05f2a901"
+
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
-    is_correct, formatted_output, formatted_solution = pipeline.solve("05f2a901")
-    print(is_correct)
-    print(formatted_output)
+    prediction, cost = pipeline.solve("05f2a901")
+    solution = np.array(solutions[id][0])
+    formatted_solution = formatter.grid_to_text(solution)
+    formatted_prediction = formatter.grid_to_text(prediction)
+    print("Prediction:")
+    print(formatted_prediction)
+
+    print("Solution:")
     print(formatted_solution)
+
+    print("Correct:")
+    print(np.array_equal(prediction, solution))
+
+    print("Cost:")
+    print(cost)

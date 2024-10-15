@@ -9,19 +9,27 @@ from demonstration_formatter import (
     DifferenceWrapper,
 )
 from solver import COTSolver
+import numpy as np
 
 
-def evaluate(pipeline: Pipeline, n: int = 5):
+def evaluate(pipeline: Pipeline, n: int = 5) -> tuple[float, float]:
+    """
+    Evaluates the pipeline on the first n challenges in the test set.
+    Returns the accuracy and the cost of the evaluations.
+    """
     pipeline.eval_mode()
     challenges, solutions = load_data(train=False)
     ids = list(challenges.keys())
     correct = 0
+    cost = 0.0
     for i in range(n):
         id = ids[i]
-        result = pipeline.solve(id)
-        if result[0]:
+        prediction, cost = pipeline.solve(id)
+        solution = np.array(solutions[id][0])
+        if np.array_equal(prediction, solution):
             correct += 1
-    return correct / n
+        cost += cost
+    return correct / n, cost
 
 
 if __name__ == "__main__":

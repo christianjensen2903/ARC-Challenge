@@ -4,6 +4,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from base_prompt import BasePromptBuilder
 from demonstration_formatter import Demonstration, DemonstrationFormatter
 from examples import examples
+from langchain_community.callbacks.manager import get_openai_callback
 
 
 class Solver(ABC):
@@ -21,24 +22,32 @@ class Solver(ABC):
         self.examples = examples[: self.num_examples]
 
     @abstractmethod
-    def solve(self, demonstrations: list[Demonstration]) -> str:
+    def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
+        """
+        Solves the puzzle and returns the solution and the cost of the solution
+        """
         pass
 
-    def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+    def generate(
+        self, prompt: str, system_prompt: str | None = None
+    ) -> tuple[str, float]:
         messages: list[BaseMessage] = []
         if system_prompt is not None:
             messages.append(SystemMessage(content=system_prompt))
 
         messages.append(HumanMessage(content=prompt))
 
-        response = self.model.invoke(messages).content
-        assert isinstance(response, str)
-        return response
+        with get_openai_callback() as cb:
+            response = self.model.invoke(messages)
+            content = response.content
+            cost = cb.total_cost
+        assert isinstance(content, str)
+        return content, cost
 
 
 class COTSolver(Solver):
 
-    def solve(self, demonstrations: list[Demonstration]) -> str:
+    def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
         formatted_demonstrations = self.formatter.format(demonstrations)
         system_prompt = self.base_prompt_builder.build(demonstrations)
 
@@ -66,6 +75,6 @@ Please solve the following puzzle.
 {formatted_demonstrations}
 """
 
-        response = self.generate(prompt, system_prompt=system_prompt)
-        prediction = response.split("```python")[1].split("```")[0]
-        return prediction
+        content, cost = self.generate(prompt, system_prompt=system_prompt)
+        prediction = content.split("```python")[1].split("```")[0]
+        return prediction, cost
