@@ -17,11 +17,12 @@ from run_program import run_program
 dotenv.load_dotenv()
 
 
-def load_data() -> tuple[dict, dict]:
-    with open("data/arc-agi_training_challenges.json") as f:
+def load_data(train: bool = True) -> tuple[dict, dict]:
+    path_type = "training" if train else "evaluation"
+    with open(f"data/arc-agi_{path_type}_challenges.json") as f:
         challenges = json.load(f)
 
-    with open("data/arc-agi_training_solutions.json") as f:
+    with open(f"data/arc-agi_{path_type}_solutions.json") as f:
         solutions = json.load(f)
 
     return challenges, solutions
@@ -29,19 +30,30 @@ def load_data() -> tuple[dict, dict]:
 
 class Pipeline:
 
-    def __init__(self, demonstration_formatter: DemonstrationFormatter, solver: Solver):
+    def __init__(
+        self,
+        demonstration_formatter: DemonstrationFormatter,
+        solver: Solver,
+        train: bool = True,
+    ):
         self.demonstration_formatter = demonstration_formatter
         self.solver = solver
-        self.challenges, self.solutions = load_data()
+        self.challenges, self.solutions = load_data(train)
         self.graph = self._create_graph()
         self.id: str | None = None
 
+    def train_mode(self):
+        self.challenges, self.solutions = load_data(train=True)
+
+    def eval_mode(self):
+        self.challenges, self.solutions = load_data(train=False)
+
     def _create_graph(self):
         graph = Graph()
-        graph.add_node("load", self.load_demonstrations)
-        graph.add_node("agent", self.call_model)
-        graph.add_node("run_program", self.run_program)
-        graph.add_node("evaluate", self.evaluate)
+        graph.add_node("load", self._load_demonstrations)
+        graph.add_node("agent", self._call_model)
+        graph.add_node("run_program", self._run_program)
+        graph.add_node("evaluate", self._evaluate)
         graph.add_edge(START, "load")
         graph.add_edge("load", "agent")
         graph.add_edge("agent", "run_program")
@@ -49,7 +61,7 @@ class Pipeline:
         graph.add_edge("evaluate", END)
         return graph.compile()
 
-    def load_demonstrations(self, id: str) -> list[Demonstration]:
+    def _load_demonstrations(self, id: str) -> list[Demonstration]:
         logging.info(f"Loading demonstrations for {id}")
         demonstrations_json = self.challenges[id]["train"]
         demonstrations = [
@@ -62,7 +74,7 @@ class Pipeline:
         self.id = id
         return demonstrations
 
-    def call_model(self, demonstrations: list[Demonstration]) -> str:
+    def _call_model(self, demonstrations: list[Demonstration]) -> str:
         logging.info("Calling model")
         return self.solver.solve(demonstrations)
 
@@ -70,7 +82,7 @@ class Pipeline:
         final_state = self.graph.invoke(id)
         return final_state
 
-    def run_program(self, solution: str) -> tuple[np.ndarray | None, str, str]:
+    def _run_program(self, solution: str) -> tuple[np.ndarray | None, str, str]:
         logging.info("Running program")
         input = np.array(self.challenges[self.id]["test"][0]["input"])
         result, stdout, stderr = run_program(solution, input)
@@ -79,7 +91,7 @@ class Pipeline:
         logging.info(f"Program stderr: {stderr}")
         return result, stdout, stderr
 
-    def evaluate(
+    def _evaluate(
         self, result: tuple[np.ndarray | None, str, str]
     ) -> tuple[bool, str, str]:
         output = result[0]

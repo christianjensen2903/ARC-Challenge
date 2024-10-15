@@ -56,7 +56,7 @@ class EmojisDemonstrations(DemonstrationFormatter):
     def __init__(self):
         super().__init__()
         self.letter_lookup = {
-            0: "   ",  # Nothing
+            0: "  ",  # Nothing
             1: "🔴",  # Red
             2: "🟢",  # Green
             3: "🔵",  # Blue
@@ -73,7 +73,7 @@ class EmojisDemonstrations(DemonstrationFormatter):
 
     def grid_to_text(self, grid: np.ndarray) -> str:
         height, width = grid.shape
-        grid_str = "    " + "   ".join(self.column_names[:width]) + "\n"
+        grid_str = "    " + "  ".join(self.column_names[:width]) + "\n"
 
         for i, row in enumerate(grid):
             text_row = self.row_names[i] + ("  " if i <= 10 else " ") + "|"
