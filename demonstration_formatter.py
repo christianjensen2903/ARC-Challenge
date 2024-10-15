@@ -76,7 +76,7 @@ class EmojisDemonstrations(DemonstrationFormatter):
         grid_str = "    " + "  ".join(self.column_names[:width]) + "\n"
 
         for i, row in enumerate(grid):
-            text_row = self.row_names[i] + ("  " if i <= 10 else " ") + "|"
+            text_row = self.row_names[i] + ("  " if i < 9 else " ") + "|"
             for value in row:
                 char = self.char_to_text(value)
                 text_row += f"{char}|"
@@ -133,7 +133,7 @@ class ASCIIDemonstrations(DemonstrationFormatter):
         grid_str = "    " + " ".join(self.column_names[:width]) + "\n"
 
         for i, row in enumerate(grid):
-            text_row = self.row_names[i] + ("  " if i <= 10 else " ") + "|"
+            text_row = self.row_names[i] + ("  " if i < 9 else " ") + "|"
             for value in row:
                 char = self.char_to_text(value)
                 text_row += f"{char}|"

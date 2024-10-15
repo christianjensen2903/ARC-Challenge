@@ -13,6 +13,7 @@ from demonstration_formatter import (
 import numpy as np
 from solver import Solver, COTSolver
 from run_program import run_program
+from langsmith import traceable
 
 dotenv.load_dotenv()
 
@@ -39,8 +40,6 @@ class Pipeline:
         self.demonstration_formatter = demonstration_formatter
         self.solver = solver
         self.challenges, self.solutions = load_data(train)
-        self.graph = self._create_graph()
-        self.id: str | None = None
 
     def train_mode(self):
         self.challenges, self.solutions = load_data(train=True)
@@ -48,17 +47,18 @@ class Pipeline:
     def eval_mode(self):
         self.challenges, self.solutions = load_data(train=False)
 
-    def _create_graph(self):
-        graph = Graph()
-        graph.add_node("load", self._load_demonstrations)
-        graph.add_node("agent", self._call_model)
-        graph.add_node("run_program", self._run_program)
-        graph.add_edge(START, "load")
-        graph.add_edge("load", "agent")
-        graph.add_edge("agent", "run_program")
-        graph.add_edge("run_program", END)
-        return graph.compile()
-
+    @traceable(
+        name="load_demonstrations",
+        process_outputs=lambda x: {
+            "demonstrations": [
+                {
+                    "input": EmojisDemonstrations().grid_to_text(demonstration.input),
+                    "output": EmojisDemonstrations().grid_to_text(demonstration.output),
+                }
+                for demonstration in x
+            ]
+        },
+    )
     def _load_demonstrations(self, id: str) -> list[Demonstration]:
         logging.info(f"Loading demonstrations for {id}")
         demonstrations_json = self.challenges[id]["train"]
@@ -69,47 +69,65 @@ class Pipeline:
             )
             for demonstration in demonstrations_json
         ]
-        self.id = id
         return demonstrations
 
+    @traceable(name="call_model")
     def _call_model(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
         logging.info("Calling model")
         return self.solver.solve(demonstrations)
 
-    def solve(self, id: str) -> tuple[np.ndarray, float]:
-        prediction, cost, _, _ = self.graph.invoke(id)
-        return prediction, cost
-
+    @traceable(
+        name="run_program",
+        process_outputs=lambda x: {
+            "prediction": EmojisDemonstrations().grid_to_text(x["prediction"]),
+            "stdout": x["stdout"],
+            "stderr": x["stderr"],
+        },
+    )
     def _run_program(
-        self, solution: tuple[str, float]
-    ) -> tuple[np.ndarray, float, str, str]:
-        prediction, cost = solution
+        self, solution: str, input: np.ndarray
+    ) -> dict[str, str | np.ndarray]:
         logging.info("Running program")
-        input = np.array(self.challenges[self.id]["test"][0]["input"])
-        result, stdout, stderr = run_program(prediction, input)
-        logging.info(f"Program output: {result}")
+
+        prediction, stdout, stderr = run_program(solution, input)
+        logging.info(f"Prediction: {prediction}")
         logging.info(f"Program stdout: {stdout}")
         logging.info(f"Program stderr: {stderr}")
 
-        return result, cost, stdout, stderr
+        return {
+            "prediction": prediction,
+            "stdout": stdout,
+            "stderr": stderr,
+        }
 
-    def _evaluate(
-        self, result: tuple[np.ndarray | None, str, str]
-    ) -> tuple[bool, str, str]:
-        output = result[0]
-        logging.info("Evaluating program")
-        solution = np.array(self.solutions[self.id][0])
-        formatted_solution = self.demonstration_formatter.grid_to_text(solution)
-        if output is None:
-            return False, "", formatted_solution
+    @traceable(
+        name="load_test_demonstration",
+        process_outputs=lambda x: {
+            "input": EmojisDemonstrations().grid_to_text(x.input),
+            "output": EmojisDemonstrations().grid_to_text(x.output),
+        },
+    )
+    def _load_test_demonstration(self, id: str) -> Demonstration:
+        logging.info(f"Loading test demonstration for {id}")
+        input = np.array(self.challenges[id]["test"][0]["input"])
+        output = np.array(self.solutions[id][0])
+        return Demonstration(input=input, output=output)
 
-        formatted_output = self.demonstration_formatter.grid_to_text(output)
-        return np.array_equal(output, solution), formatted_output, formatted_solution
+    @traceable(name="solve")
+    def solve(self, id: str) -> tuple[np.ndarray, float]:
+        demonstrations = self._load_demonstrations(id)
+        solution, cost = self._call_model(demonstrations)
+        test_demonstration: Demonstration = self._load_test_demonstration(id)
+        output: dict[str, str | np.ndarray] = self._run_program(
+            solution, test_demonstration.input
+        )
+        assert isinstance(output["prediction"], np.ndarray)
+        return output["prediction"], cost
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    model = ChatOpenAI(model="gpt-4o-mini")
     formatter = EmojisDemonstrations()
     solver = COTSolver(model, formatter=formatter)
 
@@ -117,10 +135,15 @@ if __name__ == "__main__":
     id = "05f2a901"
 
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
+    input = np.array(challenges[id]["test"][0]["input"])
     prediction, cost = pipeline.solve("05f2a901")
     solution = np.array(solutions[id][0])
+    formatted_input = formatter.grid_to_text(input)
     formatted_solution = formatter.grid_to_text(solution)
     formatted_prediction = formatter.grid_to_text(prediction)
+    print("Input:")
+    print(formatted_input)
+
     print("Prediction:")
     print(formatted_prediction)
 

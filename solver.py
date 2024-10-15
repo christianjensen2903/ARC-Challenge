@@ -8,6 +8,7 @@ from langchain_community.callbacks.manager import get_openai_callback
 from langchain_core.language_models.chat_models import ChatGeneration
 from run_program import run_program
 import numpy as np
+from langsmith import traceable
 
 
 class Solver(ABC):
@@ -62,12 +63,13 @@ class COTSolver(Solver):
         model: BaseChatModel,
         formatter: DemonstrationFormatter,
         num_examples: int = 2,
-        num_solutions: int = 5,
+        num_solutions: int = 2,
     ):
         super().__init__(model, formatter, num_examples)
         self.num_solutions = num_solutions
+        self.cost = 0.0
 
-    def predict(
+    def _predict(
         self, demonstrations: list[Demonstration], solution: str
     ) -> list[np.ndarray]:
         """
@@ -80,7 +82,7 @@ class COTSolver(Solver):
 
         return predictions
 
-    def hamming_distance(self, x: np.ndarray, y: np.ndarray) -> float:
+    def _hamming_distance(self, x: np.ndarray, y: np.ndarray) -> float:
         if x.shape != y.shape:
             return 1.0
 
@@ -89,14 +91,14 @@ class COTSolver(Solver):
 
         return float(np.mean(x != y))
 
-    def geometric_mean(self, nums: np.ndarray, axis=None) -> float:
+    def _geometric_mean(self, nums: np.ndarray, axis=None) -> float:
         # Check for any non-positive numbers
         assert (nums > 0).all()
 
         log_nums = np.log(nums)
         return np.exp(log_nums.mean(axis=axis))
 
-    def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
+    def _get_solutions(self, demonstrations: list[Demonstration]) -> list[str]:
         formatted_demonstrations = self.formatter.format(demonstrations)
         system_prompt = self.base_prompt_builder.build(demonstrations)
 
@@ -124,30 +126,91 @@ Please solve the following puzzle.
 {formatted_demonstrations}
 """
 
-        possible_solutions, cost = self.generate(
+        raw_solutions, cost = self.generate(
             prompt, system_prompt=system_prompt, n=self.num_solutions
         )
 
-        predictions: list[list[np.ndarray]] = []
-        for solution in possible_solutions:
-            solution = solution.split("```python")[1].split("```")[0]
-            predictions.append(self.predict(demonstrations, solution))
+        solutions = []
+        for raw_solution in raw_solutions:
+            try:
+                solutions.append(raw_solution.split("```python")[1].split("```")[0])
+            except Exception as e:
+                solutions.append(raw_solution)
+
+        self.cost += cost
+
+        return solutions
+
+    @traceable(run_type="retriever", name="get_predictions")
+    def _get_predictions(
+        self, demonstrations: list[Demonstration], solutions: list[str]
+    ) -> list[dict]:
+        """
+        Function is to better evaluate the solutions in LangSmith.
+        """
+        predictions = []
+        for solution in solutions:
+            preds = self._predict(demonstrations, solution)
+            formatted_preds = ""
+            for i, demonstration in enumerate(demonstrations):
+                formatted_preds += f"""
+Demonstration {i+1}:
+Input:
+{self.formatter.grid_to_text(demonstration.input)}
+
+Predicted Output:
+{self.formatter.grid_to_text(preds[i])}
+
+Actual Output:
+{self.formatter.grid_to_text(demonstration.output)}
+"""
+            predictions.append(formatted_preds)
+
+        return [
+            {
+                "page_content": predictions[i],
+                "type": "Document",
+                "metadata": {"index": i},
+            }
+            for i in range(len(predictions))
+        ]
+
+    @traceable(run_type="retriever", name="rank_solutions")
+    def _rank_solutions(
+        self, demonstrations: list[Demonstration], solutions: list[str]
+    ) -> list[dict]:
 
         scores = []
-        for preds in predictions:
+        predictions = []
+        for solution in solutions:
+            preds = self._predict(demonstrations, solution)
+            predictions.append(preds)
             distances = []
             for i, demonstration in enumerate(demonstrations):
                 pred = preds[i]
                 truth = demonstration.output
-                distance = self.hamming_distance(truth, pred)
+                distance = self._hamming_distance(truth, pred)
                 distances.append(distance)
 
-            score = self.geometric_mean(np.array(distances))
+            score = self._geometric_mean(np.array(distances))
             scores.append(score)
 
         ranks = np.argsort(scores)
-        ranks = ranks[::-1]
-        ranked_solutions = [possible_solutions[i] for i in ranks]
+        return [
+            {
+                "page_content": solutions[i],
+                "type": "Document",
+                "metadata": {
+                    "score": scores[i],
+                    "index": i,
+                },
+            }
+            for i in ranks
+        ]
 
-        best_solution = ranked_solutions[0]
-        return best_solution, cost
+    def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
+        self.cost = 0
+        solutions = self._get_solutions(demonstrations)
+        _ = self._get_predictions(demonstrations, solutions)
+        ranked_solutions = self._rank_solutions(demonstrations, solutions)
+        return ranked_solutions[0]["page_content"], self.cost

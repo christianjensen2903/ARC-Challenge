@@ -37,7 +37,7 @@ def evaluate(pipeline: Pipeline, n: int = 5) -> tuple[float, float]:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.ERROR)
-    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    model = ChatOpenAI(model="gpt-4o-mini")
     formatter = EmojisDemonstrations()
     solver = COTSolver(model, formatter=formatter)
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)

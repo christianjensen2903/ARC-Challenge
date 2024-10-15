@@ -14,6 +14,8 @@ def run_program(
     if locals is None:
         locals = {}
 
+    input_copy = input_grid.copy()
+
     stdout_capture = io.StringIO()
     stderr_capture = io.StringIO()
 
@@ -23,7 +25,7 @@ def run_program(
             stderr_capture
         ):
             exec(solution, globals(), locals)
-            out = locals["transform"](input_grid)
+            out = locals["transform"](input_copy)
 
             stdout = stdout_capture.getvalue()
             stderr = stderr_capture.getvalue()
@@ -32,9 +34,18 @@ def run_program(
         if not catch_error:
             raise e
 
-        out = input_grid
+        out = input_copy
         stdout = ""
         stderr = traceback.format_exc()
+
+    if not isinstance(out, np.ndarray):
+        out = input_copy
+
+    if out.ndim != 2:
+        out = input_copy
+
+    if out.dtype != np.int32:
+        out = input_copy
 
     return out, stdout, stderr
 
