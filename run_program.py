@@ -5,6 +5,28 @@ import traceback
 import contextlib
 
 
+def convert_to_int(value):
+    # Check if the value is a string of a number or space
+    if isinstance(value, str):
+        if value == " ":
+            return 0  # Convert space to 0
+        else:
+            return int(value)  # Convert string numbers to integers
+    return value  # If it's already an integer, return it as is
+
+
+def convert_output_to_int(output: np.ndarray) -> np.ndarray:
+    # Create an integer array of the same shape as the output
+    int_output = np.empty(output.shape, dtype=int)
+
+    for i in range(output.shape[0]):
+        for j in range(output.shape[1]):
+            # Convert each element to integer using the helper function
+            int_output[i, j] = convert_to_int(output[i, j])
+
+    return int_output
+
+
 def run_program(
     solution: str,
     input_grid: np.ndarray,
@@ -30,6 +52,8 @@ def run_program(
             stdout = stdout_capture.getvalue()
             stderr = stderr_capture.getvalue()
 
+        out = convert_output_to_int(out)
+
     except Exception as e:
         if not catch_error:
             raise e
@@ -42,9 +66,6 @@ def run_program(
         out = input_copy
 
     if out.ndim != 2:
-        out = input_copy
-
-    if out.dtype != np.int32:
         out = input_copy
 
     return out, stdout, stderr

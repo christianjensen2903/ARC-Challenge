@@ -1,5 +1,3 @@
-- Make it able to predict many codes and take the best
-- Check cost vs. accuracy of different amount of examples and amount of guesses
 - Try to give image (check cost vs. accuracy)
 - Try to give standard library (look at previous solutions and video of team)
 - Try to mess with base prompt

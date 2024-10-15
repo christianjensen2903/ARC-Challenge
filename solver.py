@@ -153,6 +153,7 @@ Please solve the following puzzle.
             preds = self._predict(demonstrations, solution)
             formatted_preds = ""
             for i, demonstration in enumerate(demonstrations):
+                pred, stdout, stderr = run_program(solution, demonstration.input)
                 formatted_preds += f"""
 Demonstration {i+1}:
 Input:
@@ -163,6 +164,12 @@ Predicted Output:
 
 Actual Output:
 {self.formatter.grid_to_text(demonstration.output)}
+
+Stdout:
+{stdout}
+
+Stderr:
+{stderr}
 """
             predictions.append(formatted_preds)
 

@@ -131,12 +131,13 @@ if __name__ == "__main__":
     formatter = EmojisDemonstrations()
     solver = COTSolver(model, formatter=formatter)
 
-    challenges, solutions = load_data()
-    id = "05f2a901"
+    train = False
+    id = "00576224"
+    challenges, solutions = load_data(train)
 
-    pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
+    pipeline = Pipeline(demonstration_formatter=formatter, solver=solver, train=train)
     input = np.array(challenges[id]["test"][0]["input"])
-    prediction, cost = pipeline.solve("05f2a901")
+    prediction, cost = pipeline.solve(id)
     solution = np.array(solutions[id][0])
     formatted_input = formatter.grid_to_text(input)
     formatted_solution = formatter.grid_to_text(solution)
