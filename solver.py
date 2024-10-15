@@ -28,7 +28,7 @@ class Solver(ABC):
         return response
 
 
-class IOSolver(Solver):
+class COTSolver(Solver):
     def solve(self, demonstrations: list[Demonstration]) -> str:
         formatted_demonstrations = self.formatter.format(demonstrations)
         system_prompt = self.base_prompt_builder.build(demonstrations)
@@ -38,4 +38,6 @@ Please solve the following puzzle.
 {formatted_demonstrations}
 """
 
-        return self.generate(prompt, system_prompt=system_prompt)
+        response = self.generate(prompt, system_prompt=system_prompt)
+        prediction = response.split("```python")[1].split("```")[0]
+        return prediction

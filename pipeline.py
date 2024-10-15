@@ -11,7 +11,8 @@ from demonstration_formatter import (
     DifferenceWrapper,
 )
 import numpy as np
-from solver import Solver, IOSolver
+from solver import Solver, COTSolver
+from run_program import run_program
 
 dotenv.load_dotenv()
 
@@ -26,6 +27,10 @@ def load_data() -> tuple[dict, dict]:
     return challenges, solutions
 
 
+# TODO: Make evaluation of the model
+# TODO: Give examples
+
+
 class Pipeline:
 
     def __init__(self, demonstration_formatter: DemonstrationFormatter, solver: Solver):
@@ -33,15 +38,19 @@ class Pipeline:
         self.solver = solver
         self.challenges, self.solutions = load_data()
         self.graph = self._create_graph()
+        self.id: str | None = None
 
     def _create_graph(self):
         graph = Graph()
         graph.add_node("load", self.load_demonstrations)
         graph.add_node("agent", self.call_model)
-
+        graph.add_node("run_program", self.run_program)
+        graph.add_node("evaluate", self.evaluate)
         graph.add_edge(START, "load")
         graph.add_edge("load", "agent")
-        graph.add_edge("agent", END)
+        graph.add_edge("agent", "run_program")
+        graph.add_edge("run_program", "evaluate")
+        graph.add_edge("evaluate", END)
         return graph.compile()
 
     def load_demonstrations(self, id: str) -> list[Demonstration]:
@@ -54,6 +63,7 @@ class Pipeline:
             )
             for demonstration in demonstrations_json
         ]
+        self.id = id
         return demonstrations
 
     def call_model(self, demonstrations: list[Demonstration]) -> str:
@@ -64,12 +74,37 @@ class Pipeline:
         final_state = self.graph.invoke(id)
         return final_state
 
+    def run_program(self, solution: str) -> tuple[np.ndarray | None, str, str]:
+        logging.info("Running program")
+        input = np.array(self.challenges[self.id]["test"][0]["input"])
+        result, stdout, stderr = run_program(solution, input)
+        logging.info(f"Program output: {result}")
+        logging.info(f"Program stdout: {stdout}")
+        logging.info(f"Program stderr: {stderr}")
+        return result, stdout, stderr
+
+    def evaluate(
+        self, result: tuple[np.ndarray | None, str, str]
+    ) -> tuple[bool, str, str]:
+        output = result[0]
+        logging.info("Evaluating program")
+        solution = np.array(self.solutions[self.id][0])
+        formatted_solution = self.demonstration_formatter.grid_to_text(solution)
+        if output is None:
+            return False, "", formatted_solution
+
+        formatted_output = self.demonstration_formatter.grid_to_text(output)
+        return np.array_equal(output, solution), formatted_output, formatted_solution
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     formatter = EmojisDemonstrations()
-    solver = IOSolver(model, formatter=formatter)
+    solver = COTSolver(model, formatter=formatter)
 
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
-    print(pipeline.solve("05f2a901"))
+    is_correct, formatted_output, formatted_solution = pipeline.solve("05f2a901")
+    print(is_correct)
+    print(formatted_output)
+    print(formatted_solution)
