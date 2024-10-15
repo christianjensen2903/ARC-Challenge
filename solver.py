@@ -63,7 +63,7 @@ class COTSolver(Solver):
         model: BaseChatModel,
         formatter: DemonstrationFormatter,
         num_examples: int = 2,
-        num_solutions: int = 2,
+        num_solutions: int = 16,
     ):
         super().__init__(model, formatter, num_examples)
         self.num_solutions = num_solutions

@@ -10,11 +10,10 @@ from demonstration_formatter import (
 )
 from solver import COTSolver
 import numpy as np
+from langsmith import traceable
 
 
-# TODO: Fix logging of multiple predictions
-
-
+@traceable(name="evaluate")
 def evaluate(pipeline: Pipeline, n: int = 5) -> tuple[float, float]:
     """
     Evaluates the pipeline on the first n challenges in the test set.
@@ -32,7 +31,7 @@ def evaluate(pipeline: Pipeline, n: int = 5) -> tuple[float, float]:
         if np.array_equal(prediction, solution):
             correct += 1
         cost += cost
-    return correct / n, cost
+    return correct / n, cost / n
 
 
 if __name__ == "__main__":
@@ -41,5 +40,6 @@ if __name__ == "__main__":
     formatter = EmojisDemonstrations()
     solver = COTSolver(model, formatter=formatter)
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
-    accuracy = evaluate(pipeline)
+    accuracy, avg_cost = evaluate(pipeline)
     print(f"Accuracy: {accuracy}")
+    print(f"Average cost: {avg_cost}")
