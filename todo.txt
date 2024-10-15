@@ -1,1 +1,7 @@
-2. Try to use lists instead. It seems terrible at understanding positions
+- Make evaluation of subset
+- Make it able to predict many codes and take the best
+- Check cost vs. accuracy of different amount of examples and amount of guesses
+- Try to give image (check cost vs. accuracy)
+- Try to give standard library
+- Try to mess with base prompt
+- Make "beam" search. Reitereate on the best solutions n times or a solution is found

@@ -27,10 +27,6 @@ def load_data() -> tuple[dict, dict]:
     return challenges, solutions
 
 
-# TODO: Make evaluation of the model
-# TODO: Give examples
-
-
 class Pipeline:
 
     def __init__(self, demonstration_formatter: DemonstrationFormatter, solver: Solver):
@@ -70,7 +66,7 @@ class Pipeline:
         logging.info("Calling model")
         return self.solver.solve(demonstrations)
 
-    def solve(self, id: str) -> str:
+    def solve(self, id: str) -> tuple[bool, str, str]:
         final_state = self.graph.invoke(id)
         return final_state
 

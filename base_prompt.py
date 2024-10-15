@@ -24,6 +24,7 @@ Start your response by carefully reasoning in <reasoning></reasoning> tags. Then
 
 After your reasoning write code in triple backticks (```python and then ```).
 You should write a function called `transform` which takes a single argument, the input grid as `np.ndarray`, and returns the transformed grid (also as `np.ndarray`).
+The grid will be 2D and contain integers.
 You should make sure that you implement a version of the transformation which works in general (it shouldn't just work for the additional input).
 
 Don't write tests in your python code, just output the `transform` function. (It will be tested later.)
