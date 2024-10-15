@@ -12,6 +12,9 @@ from solver import COTSolver
 import numpy as np
 
 
+# TODO: Fix logging of multiple predictions
+
+
 def evaluate(pipeline: Pipeline, n: int = 5) -> tuple[float, float]:
     """
     Evaluates the pipeline on the first n challenges in the test set.

@@ -91,10 +91,6 @@ class Pipeline:
         logging.info(f"Program stdout: {stdout}")
         logging.info(f"Program stderr: {stderr}")
 
-        # If result is None output the input
-        if result is None:
-            return input, cost, stdout, stderr
-
         return result, cost, stdout, stderr
 
     def _evaluate(

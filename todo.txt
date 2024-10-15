@@ -1,4 +1,3 @@
-- Make evaluation of subset
 - Make it able to predict many codes and take the best
 - Check cost vs. accuracy of different amount of examples and amount of guesses
 - Try to give image (check cost vs. accuracy)
@@ -8,6 +7,7 @@
     - Try to look for shapes that are in both input and output i.e. if in input check if also in output and vice versa
 
 - Make "beam" search. Reitereate on the best solutions n times or a solution is found
+- Majority vote on solutions that are equally good (kind of self-consistency)
 - Recolor inputs. Maybe more advanced as in https://www.kaggle.com/competitions/abstraction-and-reasoning-challenge/discussion/154597
 - Maybe flip inputs. Would maybe make it easier to see what column and rows
 - Bucket examples into same grid size or not same grid size

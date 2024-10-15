@@ -10,7 +10,7 @@ def run_program(
     input_grid: np.ndarray,
     catch_error: bool = True,
     locals: dict | None = None,
-) -> tuple[np.ndarray | None, str, str]:
+) -> tuple[np.ndarray, str, str]:
     if locals is None:
         locals = {}
 
@@ -32,7 +32,7 @@ def run_program(
         if not catch_error:
             raise e
 
-        out = None
+        out = input_grid
         stdout = ""
         stderr = traceback.format_exc()
 

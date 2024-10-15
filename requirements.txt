@@ -8,3 +8,4 @@ bitsandbytes==0.42.0
 python-dotenv==1.0.1
 langgraph==0.2.35
 langchain-openai==0.2.2
+langchain-community==0.3.2
