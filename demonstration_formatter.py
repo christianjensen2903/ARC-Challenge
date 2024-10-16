@@ -9,8 +9,11 @@ from shape_extractor import ShapeExtractor
 class DemonstrationFormatter(ABC):
 
     def __init__(self):
-        self.column_names = list(string.ascii_uppercase)
-        self.row_names = [str(i) for i in range(1, 40)]
+
+        self.column_names = list(string.ascii_uppercase) + [
+            "A" + c for c in list(string.ascii_uppercase)
+        ]
+        self.row_names = [str(i) for i in range(1, len(self.column_names) + 2)]
 
     @abstractmethod
     def char_to_text(self, char: int) -> str:
@@ -73,7 +76,11 @@ class EmojisDemonstrations(DemonstrationFormatter):
 
     def grid_to_text(self, grid: np.ndarray) -> str:
         height, width = grid.shape
-        grid_str = "    " + "  ".join(self.column_names[:width]) + "\n"
+        grid_str = "    "
+        for i in range(width):
+            grid_str += self.column_names[i]
+            grid_str += "  " if len(self.column_names[i]) == 1 else " "
+        grid_str += "\n"
 
         for i, row in enumerate(grid):
             text_row = self.row_names[i] + ("  " if i < 9 else " ") + "|"
@@ -365,10 +372,13 @@ For instance, if element1 changes to element2 at A1 A2 B7, this would be represe
 
 if __name__ == "__main__":
     emoji_formatter = EmojisDemonstrations()
+
+    # Make random 40x40 grid
+    grid = np.random.randint(0, 10, (40, 40))
+    print(emoji_formatter.grid_to_text(grid))
+
     demonstrations = [
-        Demonstration(
-            input=np.array([[4, 5], [4, 4]]), output=np.array([[7, 0], [7, 7]])
-        ),
+        Demonstration(input=grid, output=np.array([[7, 0], [7, 7]])),
         Demonstration(
             input=np.array([[9, 0], [3, 4]]), output=np.array([[2, 5], [3, 1]])
         ),

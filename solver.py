@@ -9,7 +9,6 @@ from langchain_core.language_models.chat_models import ChatGeneration
 from run_program import run_program
 import numpy as np
 from langsmith import traceable
-from sklearn.metrics import pairwise_distances  # type: ignore
 from sklearn.cluster import KMeans  # type: ignore
 
 
@@ -233,7 +232,6 @@ Stderr:
 
         return top_models_indices.tolist()
 
-    # TODO: fix Header error
     @traceable(run_type="retriever", name="rank_solutions")
     def _rank_solutions(
         self, demonstrations: list[Demonstration], solutions: list[str]
