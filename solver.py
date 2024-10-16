@@ -10,6 +10,7 @@ from run_program import run_program
 import numpy as np
 from langsmith import traceable
 from sklearn.cluster import KMeans  # type: ignore
+import random
 
 
 class Solver(ABC):
@@ -102,6 +103,7 @@ class COTSolver(Solver):
         return np.exp(log_nums.mean(axis=axis))
 
     def _get_solutions(self, demonstrations: list[Demonstration]) -> list[str]:
+
         formatted_demonstrations = self.formatter.format(demonstrations)
         system_prompt = self.base_prompt_builder.build(demonstrations)
 
@@ -127,6 +129,42 @@ Let's implement it in code.
         prompt = f"""
 Please solve the following puzzle.
 {formatted_demonstrations}
+
+Remember to answer in the format:
+<reasoning>
+**Demonstration 1**
+Reasoning:
+...
+
+Hypothesis:
+...
+
+**Demonstration 2**
+Reasoning:
+...
+
+Hypothesis:
+...
+
+...
+
+**Demonstration n**
+Reasoning:
+...
+
+Hypothesis:
+...
+
+Final theory:
+...
+
+The code should:
+...
+
+</reasoning>
+```python
+...
+```
 """
 
         raw_solutions, cost = self.generate(
@@ -280,6 +318,9 @@ Stderr:
 
     def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
         self.cost = 0
+
+        # random.shuffle(demonstrations)
+
         solutions = self._get_solutions(demonstrations)
         _ = self._trace_predictions(demonstrations, solutions)
         ranked_solutions = self._rank_solutions(demonstrations, solutions)

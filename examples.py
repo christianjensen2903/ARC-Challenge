@@ -10,81 +10,135 @@ examples: list[Example] = [
     Example(
         id="4be741c5",
         reasoning="""
-The outputs don't have the same shape as the inputs, and they don't appear to be somewhat edited copies of the input.
+**Demonstration 1**
+Reasoning:
+We see that both the input and output consist of yellow, green and white cells which also happens to be the amount of cells in the output.
+If we look at the colors ordered from left to right we see they have the same ordering of colors.
 
-The inputs appear to consist of "noisy" segments which are either stacked on top of each other or side-by-side. In other words, they are either noisy columns or noisy rows. Each segment consists of exactly one color. These colors also appear in the output.
+Hypothesis:
+The output are the distinct colors in the input ordered from left to right.
 
-In two of the example inputs (inputs 2 and 3), there are horizontal segments (rows) which are stacked on top of each other. The outputs for these inputs are each single columns. The color of each cell in the output column is the color of the corresponding segment in the input.
+**Demonstration 2**
+Reasoning:
+We can see our theory doesn't hold for the second demonstration. As the colors left to right depending on which row only consist of 1 or two colors where as the output consist of 3 distinct colors.
+However if we look at the output we can see that the colors are ordered vertically instead of horizontally.
+If we then look at the colors ordered from top to bottom in the input we see they have the same ordering of colors.
+How do we figure out if it's top to bottom or left to right based on the input?
+We can see if we look at the top row of the input. If it consist of 1 color it's top to bottom. If it consist of 2 or more colors it's left to right.
 
-In the other example input (input 1), there are vertical segments (columns) which are stacked side-by-side. The output for this input is a single row. The color of each cell in the output row is the color of the corresponding segment in the input.
+Hypothesis:
+The output are the distinct colors in the input ordered from either top to bottom or left to right depending on how many colors the top row consists of.
 
-In the additional input, there are vertical segments (columns) which are stacked side-by-side. This input matches the "noisy" segment pattern of the other inputs.
+**Demonstration 3**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
 
-The transformation rule appears to be to identify the colors of the segments and then to stack them side-by-side if they are columns or on top of each other if they are rows.
+Hypothesis:
+No changes from the previous demonstration.
 
-My code will first need to determine if the input consists of column segments or row segments. Then, it will need to identify the colors of the segments and stack them side-by-side or on top of each other as appropriate.
-
-How can I determine if the input consists of column segments or row segments? Inputs which consist of column segments don't necessarily have the same color in each literal column of the grid as it is "noisy". However, they do always have the same color in the leftmost (or rightmost) column. Otherwise, the leftmost (or rightmost) segment wouldn't be contiguous. Similarly, inputs which consist of row segments don't necessarily have the same color in each literal row of the grid as it is "noisy". However, they do always have the same color in the topmost (or bottommost) row.
-
-So, to identify if the input consists of column segments or row segments, I can check if all of the cells in the leftmost column have the same color. If they do, then the input consists of column segments. Otherwise, the input consists of row segments.
-
-I need to know the colors of the segments (in order). I know that the segments are contiguous. So, I can take any row/column which includes all of the segments and then deduplicate the colors in that row/column. The resulting list of colors will be the colors of the segments (in order). If the input consists of column segments, then I want to look at a row/column which will intersect with all of these segments. So, in the case of column segments, I want to look at any row. I'll use the top row. If the input consists of row segments, then I want to look at a row/column which will intersect with all of these segments. So, in the case of row segments, I want to look at any column. I'll use the left column.
+Final theory:
+The output are the distinct colors in the input ordered from either top to bottom or left to right depending on how many colors the top row consists of.
 
 The code should:
-
-- Identify if the input consists of column segments or row segments. This can be done by checking if all of the cells in the leftmost column have the same color.
-- Identify the colors of the segments (in order). This can be done by looking at the top row if the input consists of column segments and by looking at the left column if the input consists of row segments.
-- If the input is columns, return a single row where each cell is the color of the corresponding segment. If the input is rows, return a single column where each cell is the color of the corresponding segment.
+1. Look at the top row of the input to determine left to right or top to bottom.
+2. Identify the colors and their ordering based on the direction.
+3. Output the colors in the correct ordering in the correct direction.
 """,
         code="""
 def transform(grid: np.ndarray) -> np.ndarray:
+    # Identify if the ordering of colors is from left to right or top to bottom.
     left_column = grid[:, 0]
     top_row = grid[0, :]
-
-    is_columns = np.all(left_column == left_column[0])
-
-    intersecting_item = top_row if is_columns else left_column
-
-    out_in_order = list(dict.fromkeys(intersecting_item))
-
-    if is_columns:
-        return np.array([out_in_order])
+    # Get distinct values
+    left_column_values = list(dict.fromkeys(left_column))
+    top_row_values = list(dict.fromkeys(top_row))
+    if len(top_row_values) == 1:
+        # Ordering is from left to right
+        left_to_right = False
     else:
-        return np.array([[x] for x in out_in_order])
-```
-""",
+        # Ordering is from top to bottom
+        left_to_right = True
+    # Get the colors of the segments
+    if left_to_right:
+        # Get the colors of the segments
+        colors = top_row_values
+    else:
+        # Get the colors of the segments
+        colors = left_column_values
+    # Output the colors in the correct ordering
+    output = np.array([colors])
+    if not left_to_right:
+        output = output.T
+    return output
+    """,
         demonstrations=[],
     ),
     Example(
         id="228f6490",
         reasoning="""
-The outputs always have the same shape as the inputs. The outputs are similar to the inputs, but some edits have been made.
+**Demonstration 1**
+Reasoning:
+We can see that the input and output mostly consist of the same shapes in the same locations.
+However there seems to be a two shapes missing: The white square and the grey rectangle.
+However if we look closer we can see that they are actually not missing, but rather moved.
+We see that we have the same large purple shapes in both the input and output.
+In the input we can see there are "holes" in the purple shapes that is then filled with the white square and the grey rectangle.
+Why these shapes?
+We can see that the white square has the same size as the "hole" in one of the purple shapes and the grey has the same size as the "hole" in the other.
+So it seems it "fills" the whole in the purple shapes with shapes of the same size.
+However we see that there is an orange shape with the same size as the grey rectangle.
+Why is the grey rectangle chosen over the orange?
+The rule could be that it choose the shape that is closest.
 
-I'll describe the change from the input to the output in detail for each of the examples. I'll also describe the input for each example as seems relevant.
+However let's keep looking for other patterns.
+If we look at the colors of the shapes excluding the purple ones we see there is 6 shapes. 1 white, 1 grey and 4 orange.
+So the pattern could also be to choose the shapes that have a distinct color.
 
-In example 1, a teal (color 8) 2x2 square is removed from around the bottom left. The output contains a teal 2x2 square in a different position, so it appears as though the square has been moved. It was moved to the top left. It seems to have been moved inside of a grey (color 5) outline that was present in the original input. The new position of the teal 2x2 square used to be black (color 0) in the original input. The teal 2x2 square exactly matches the black 2x2 square that was in the grey outline in the original input. So, there are no longer any black cells in the grey outline. A fuchsia (color 6) 1x2 rectangle was removed from the top right. The output contains a fuchsia 1x2 rectangle in a different position, so it seems to have been moved. It was moved to the bottom right. It seems to have been moved inside of a grey outline that was present in the original input. The new position of the fuchsia 1x2 rectangle used to be black in the original input. The fuchsia 1x2 rectangle exactly matches the black 1x2 rectangle that was in the grey outline in the original input. So, there are no longer any black cells in the grey outline. The rest of the cells in the input are unchanged, including a number of orange (color 7) cells.
+Both rules seems to apply and seems like logical rules.
+We will choose the second rule since it seems to be a more destinct pattern.
 
-In example 2, a green (color 3) L shape is removed from the middle left. The output contains a green L in a different position, so it seems to have been moved. It was moved to the top left. It seems to have been moved inside of a grey outline that was present in the original input. The new position of the green L used to be black in the original input. The green L exactly matches the black L that was in the grey outline in the original input. So, there are no longer any black cells in the grey outline. A brown (color 9) rectangle was removed from the top right. The output contains a brown rectangle in a different position, so it seems to have been moved. It was moved to the bottom right. It seems to have been moved inside of a grey outline that was present in the original input. The new position of the brown rectangle used to be black in the original input. The brown rectangle exactly matches the black rectangle that was in the grey outline in the original input. So, there are no longer any black cells in the grey outline. The rest of the cells in the input are unchanged, including a number of fuchsia cells.
+Hypothesis:
+The purple shapes are filled with the shapes that have a distinct color.
 
-In example 3, a purple (color 2) shape is removed from the top left. The output contains the same purple shape in a different position, so it seems to have been moved. It was moved to the bottom left. It seems to have been moved inside of a grey outline that was present in the original input. The new position of the purple shape used to be black in the original input. The purple shape exactly matches the black shape that was in the grey outline in the original input. So, there are no longer any black cells in the grey outline. A teal (color 8) shape was removed from the bottom right. The output contains a teal shape in a different position, so it seems to have been moved. It was moved to the top right. It seems to have been moved inside of a grey outline that was present in the original input. The new position of the teal shape used to be black in the original input. The teal shape exactly matches the black shape that was in the grey outline in the original input. So, there are no longer any black cells in the grey outline. The rest of the cells in the input are unchanged, including a number of yellow (color 4) cells.
+**Demonstration 2**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
 
-The transformation rule appears to be to take whichever shapes can be used to fill in the gaps in the grey outlines and then move those shapes into the grey outlines. The colored shapes are removed from the old locations (replaced with black) and then the gap is filled in with the corresponding color. This is done while leaving everything else as is.
+Hypothesis:
+No changes from the previous demonstration.
 
-I should check this proposed rule and make sure it is unambiguous. Are there ever any cases where a different shape could have fit inside the grey outline? I should check example by example.
+**Demonstration 3**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
 
-In example 1, are there any 2x2 squares other than the teal square? No. Are there any 1x2 rectangles other than the fuchsia rectangle? Yes, there is an orange 1x2 rectangle. So, the proposed rule is ambiguous in this case.
+Hypothesis:
+No changes from the previous demonstration.
 
-So, the rule can't just be to take any shape which fits in the grey outline and move it into the grey outline. I should analyze what's going on with the cells which aren't moved. The cells which aren't moved in example 1 are orange. There are multiple discontinuous orange cells while the teal and fuchsia shapes are unique and contiguous. So, the rule could be to move the contiguous shapes which have a unique color into the outline where they fit. I need to check this rule in the other examples. In example 2, the green and brown shapes are unique and contiguous while the fuchsia cells have multiple discontinuous groups. In example 3, the purple and teal shapes are unique and contiguous while the yellow cells are not. In the additional input, there is a unique orange shape and a unique yellow shape while there are multiple discontinuous groups of purple cells. There are exactly two gaps in the grey outlines. So, this rule is unambiguous here as well.
+Final theory:
+The purple shapes are filled with the shapes that have a distinct color.
 
-Ok, I now understand the rule. I need to identify the contiguous shapes which have a unique color and then move them into the corresponding void grey outline.
+The code should at high level:
+1. Identify the two shapes with distinct colors.
+2. Identify the purple shapes.
+3. Identify the shapes of the "holes" in the purple shapes.
+4. Move the shapes that have a distinct color to the "holes" in the purple shapes.
 
-To implement this, I will:
-
-1. Identify each grey outline. I can do this by finding all of the grey cells and then finding the contiguous grey groupings (which should correspond to each outline). This assumes that each grey outline is disjoint from the others. Is this assumption correct? Yes, it is correct. The grey outlines are disjoint from each other.
-2. For each grey outline, I will find the black cells inside of it. Each grey outline is always rectangular, so I can find the bounding box of the grey outline and then find the black cells inside of the bounding box.
-3. For each black shape inside of a grey outline, I will find the contiguous shape of the same shape but of a different color. I can do this by finding all of the cells of each color and then finding the contiguous shapes of each color. I will then check if each shape is the same shape as the black shape. I also need to check that the colored shape is the unique contiguous shape of that color.
-4. I will then move the colored shape into the grey outline and replace the old location of the colored shape with black.
-5. I will then return the new grid.
+The code should at low level:
+1. Identify unique colors
+2. Find contiguous shapes of each color
+3. Find shapes with a distinct color
+4. Identify the purple shapes
+5. Copy the input grid to the output grid
+6. Iterate over the purple shapes
+7. Find the bounding box of the purple shape
+8. Find the "hole" in the purple shape
+9. Find the shape with a distinct color that has the same shape as the "hole"
+10. Iterate over the shapes with a distinct color
+11. Normalize the shape and the hole to row 0 and col 0 to being able to compare with the "hole"
+12. Check if the normalized shape and the normalized hole are the same
+13. Set the hole to the color of the shape
+14. Set the old location of the shape to black
+15. Return the new grid
 """,
         code="""
 from scipy.ndimage import label
@@ -96,572 +150,560 @@ def find_contiguous_shapes(grid, color):
         shapes.append(np.argwhere(labeled_array == i))
     return shapes
 
+def normalize_shape(shape):
+    rows, cols = shape[:, 0], shape[:, 1]
+    min_row, min_col = rows.min(), cols.min()
+    return shape - [min_row, min_col]
+
+def shape_is_equal(shape1, shape2):
+    return np.array_equal(np.sort(shape1, axis=0), np.sort(shape2, axis=0))
+
 def transform(grid: np.ndarray) -> np.ndarray:
-    grey_color = 5
-    black_color = 0
+    # Find shapes with distinct colors
+    colors = np.unique(grid)
+    shapes_with_distinct_colors = []
+    for color in colors:
+        if color == 0:
+            continue
+        shapes = find_contiguous_shapes(grid, color)
+        if len(shapes) == 1:
+            shapes_with_distinct_colors.append((shapes[0], color))
 
-    # Find all grey outlines
-    grey_shapes = find_contiguous_shapes(grid, grey_color)
+    # Identify the purple shapes
+    purple_color = 5
+    purple_shapes = find_contiguous_shapes(grid, purple_color)
 
-    for grey_shape in grey_shapes:
-        # Find the bounding box of the grey outline
-        min_row, min_col = np.min(grey_shape, axis=0)
-        max_row, max_col = np.max(grey_shape, axis=0)
+    output = grid.copy()
 
-        # Find the black cells inside the grey outline
-        black_shape = np.argwhere(grid[min_row:max_row+1, min_col:max_col+1] == black_color)
+    for purple_shape in purple_shapes:
 
-        # Adjust the coordinates to the original grid
-        black_shape += [min_row, min_col]
+        # Find the bounding box of the shape
+        rows, cols = purple_shape[:, 0], purple_shape[:, 1]
+        min_row, max_row = rows.min(), rows.max()
+        min_col, max_col = cols.min(), cols.max()
 
-        # Find the shape that matches the black shape
-        for color in range(1, 10):
-            if color == grey_color or color == black_color:
-                continue
-            color_shapes = find_contiguous_shapes(grid, color)
-            if len(color_shapes) > 1:
-                # discard multiple disconnected shapes
-                continue
-            if len(color_shapes) == 0:
-                continue
+        # Extract the sub-grid containing the shape, cropping to the bounding box
+        purple_shape_grid = grid[min_row : max_row + 1, min_col : max_col + 1]
 
-            color_shape = color_shapes[0]
-            # this shape should be the same shape as the black shape
-            if np.array_equal(np.diff(np.sort(black_shape, axis=0), axis=0), np.diff(np.sort(color_shape, axis=0), axis=0)):
-                # Move the colored shape into the grey outline
-                for cell in black_shape:
-                    grid[cell[0], cell[1]] = color
-                # Replace the old location of the colored shape with black
-                for cell in color_shape:
-                    grid[cell[0], cell[1]] = black_color
+        # Find the shapes of the "hole" in the purple shape
+        hole = find_contiguous_shapes(purple_shape_grid, 0)[0]
+
+        # Find the shape with a distinct color that matches the size of the hole
+        for shape, color in shapes_with_distinct_colors:
+
+            # Normalize the shape and the hole
+            normalized_shape = normalize_shape(shape.copy())
+            normalized_hole = normalize_shape(hole.copy())
+
+            if shape_is_equal(normalized_shape, normalized_hole):
+                # Move the shape into the hole
+                for cell in hole:
+                    output[cell[0] + min_row, cell[1] + min_col] = color
+                
+                # Replace the old location of the shape with black
+                for cell in shape:
+                    output[cell[0], cell[1]] = 0
+                
                 break
-        else:
-            assert False, "No matching shape found"
 
-    return grid
-```
+    return output
 """,
         demonstrations=[],
     ),
     Example(
         id="760b3cac",
         reasoning="""
-The outputs always have the same shape as the inputs. The outputs are similar to the inputs, but some edits have been made.
+**Demonstration 1**
+Reasoning:
+We see that the yellow shape is present in both the input and output.
+We also see that the white shape is present in both.
+We however also see a new shape is added to the output. This seems to be the reflection of the white shape where is has been reflected to the left.
+So it seems that the output is the same as the input but where the white shape is reflected to the left aswell.
 
-I'll describe the change from the input to the output in detail for each of the examples. I'll also describe the input for each example as seems relevant.
+Hypothesis:
+The output is the same as the input but the white shape is reflected to the left.
 
-In example 1, the teal (color 8) shape is reflected across the vertical line at the left edge of the teal shape. There is also a yellow (color 4) shape below the teal shape which is unchanged.
+**Demonstration 2**
+Reasoning:
+We see that the yellow and white shapes again is the same in the input and output.
+It also seems like there is added a reflection this time. However this time the white shape is reflected to the right instead of to the left.
+Why can this be?
+Maybe it has something to do with shape of the white shape?
+If we look at the first demonstration the left side is 1 cell and the right side is 3 cells.
+It could be that is reflection depends on the length of the side.
+If we look at the second demonstration the left side is 2 cells and the right side is 2 cells.
+It could then be that it is reflected on the side with the shortest length.
 
-In example 2, the teal shape is reflected across the vertical line at the right edge of the teal shape. The teal shape is different from the teal shape in example 1. There is also a yellow shape below the teal shape which is unchanged. The yellow shape is different from the yellow shape in example 1. However, it is just the reflection of the yellow shape in example 1.
+Hypothesis:
+The output is the same as the input but the white shape is reflected to either the left or right depending on which side is the shortest of the white shape.
 
-In example 3, the teal shape is reflected across the vertical line at the left edge of the teal shape. The teal shape is different from the teal shape in example 1. There is also a yellow shape below the teal shape which is unchanged. The yellow shape is the same as the yellow shape in example 1.
+**Demonstration 3**
+Reasoning:
+We can see that our theory with shapes appearing in the input and output is still valid.
+This time it is reflected to the left. If we look a the length of the sides we see that the left side is 2 cells and the right side is 1 cell.
+It therefore seems like our theory doesn't work for the third demonstration.
 
-In the additional input, there is a teal shape and there is also a yellow shape. The teal shape is different from the teal shape in example 1. The yellow shape is the same as the yellow shape in example 2 (which isn't the same as example 1).
+Let's see if we can figure out a new rule.
+Let's look at the first demonstration again.
+If we look at the yellow shape we can see that the left side is 2 cells and the right side is 1 cell.
+It could then be that is it reflected based on the shape of the yellow shape.
+Let's look at the second demonstration.
+This time we can see that the yellow shape has a length of 1 cell on the left side and 2 cells on the right side.
+It could therefore be that the white shape is reflected based on the longest side of the yellow shape.
 
-The rule is to reflect the teal shape across a vertical line at the edge of the teal shape. I need to determine which side of the teal shape to reflect towards. Example 2 differs from examples 1 and 3 in which side the teal shape is reflected towards. Are there any salient commonalities between examples 1 and 3 which differ from example 2? Yes, the yellow shape is the same in examples 1 and 3. The yellow shape is different in example 2. So, the orientation of the yellow shape determines which side the teal shape is reflected towards.
+Let's look at the third demonstration.
+This time the yellow shape has a length of 2 cells on the left side and 1 cell on the right side.
+Our theory therefore still holds.
 
-If the yellow shape is:
-4|0|0
-4|4|4
-0|4|0
+Hypothesis:
+The output is the same as the input but the white shape is reflected to either the left or right depending on which side is the shortest of the yellow shape.
 
-Then the teal shape is reflected towards the left. If the yellow shape is:
-0|0|4
-4|4|4
-0|4|0
+Final theory:
+The output is the same as the input but the white shape is reflected to either the left or right depending on which side is the shortest of the yellow shape.
 
-Then the teal shape is reflected towards the right.
-
-The yellow shape always appears in the middle in the bottom 3 rows, so it should be easy to check what orientation it is in. Then, I just need to reflect the teal shape based on the orientation of the yellow shape. If it is the first orientation, I reflect towards the left. If it is the second orientation, I reflect towards the right.
-""",
+The code should:
+1. Copy the input grid to the output grid
+2. Identify the yellow shape
+3. Identify the longest side of the yellow shape
+4. Reflect the white shape based on the longest side of the yellow shape
+    """,
         code="""
-def reflect_shape(grid, shape_coords, direction):
-    min_row, min_col = np.min(shape_coords, axis=0)
-    max_row, max_col = np.max(shape_coords, axis=0)
+def normalize_shape(shape: np.ndarray) -> np.ndarray:
+    min_row, min_col = np.min(shape, axis=0)
+    return shape - [min_row, min_col]
 
-    if direction == 'left':
-        for row, col in shape_coords:
-            new_col = min_col - (col - min_col) - 1
-            grid[row, new_col] = grid[row, col]
-    elif direction == 'right':
-        for row, col in shape_coords:
-            new_col = max_col + (max_col - col) + 1
-            grid[row, new_col] = grid[row, col]
 
 def transform(grid: np.ndarray) -> np.ndarray:
-    teal_color = 8
-    yellow_color = 4
+    # Copy the input grid to the output grid
+    output_grid = grid.copy()
 
-    # Find the yellow shape
-    yellow_shape = np.argwhere(grid == yellow_color)
+    # Identify the yellow shape
+    yellow_shape = np.argwhere(grid == 4)
 
-    # Determine the orientation of the yellow shape
-    if np.array_equal(yellow_shape, np.array([[3, 3], [4, 3], [4, 4], [4, 5], [5, 4]])):
-        direction = 'left'
-    elif np.array_equal(yellow_shape, np.array([[3, 5], [4, 3], [4, 4], [4, 5], [5, 4]])):
-        direction = 'right'
-    else:
-        raise ValueError("Unexpected yellow shape orientation")
+    # Identify the longest side of the yellow shape
+    _, side_lengths = np.unique(yellow_shape[:, 1], return_counts=True)
 
-    # Find the teal shape
-    teal_shape = np.argwhere(grid == teal_color)
+    left_is_longer = side_lengths[0] > side_lengths[-1]
 
-    # Reflect the teal shape
-    reflect_shape(grid, teal_shape, direction)
+    # Reflect the white shape based on the longest side of the yellow shape
+    white_shape = np.argwhere(grid == 8)
+    flipped_white_shape = np.flip(white_shape, axis=0)
+    normalized_flipped_white_shape = normalize_shape(flipped_white_shape)
 
-    return grid
-""",
+    for x, y in normalized_flipped_white_shape:
+        if left_is_longer:
+            output_grid[x, y] = 8
+        else:
+            output_grid[x, y + 6] = 8
+
+    return output_grid
+    """,
         demonstrations=[],
     ),
     Example(
         id="253bf280",
         reasoning="""
-The outputs always have the same shape as the inputs. The outputs are similar to the inputs, but some edits have been made.
+**Demonstration 1**
+Reasoning:
+We see that the two white dots are present at the same location in the input and output.
+The pattern could be that the two white dots are connected by a blue line.
 
-I'll describe the change from the input to the output in detail for each of the examples. I'll also describe the input for each example as seems relevant.
+Hypothesis:
+The output is the same as the input but the two white dots are connected by a blue line.
 
-In example 1, the two teal (color 8) cells are connected by a green (color 3) line. The line is horizontal and connects the two teal cells.
+**Demonstration 2**
+Reasoning:
+We see that there this time is 4 white dots and also is at the same location in the input and output.
+However we can see that they are not all connected to each other.
+How do we know which white dots we should connect?
+On the first demonstration it is simple. We connect the two white dots.
+On the second demonstration it makes sense to connect the dots that are in the same column since the lines else couldn't be straight.
 
-In example 2, the four teal cells are connected by green lines. The lines are vertical and connect the teal cells in pairs.
+Hypothesis:
+The output is the same as the input but the white dots one the same row or column are connected by a blue line.
 
-In example 3, the four teal cells are connected by green lines. The lines are horizontal and connect the teal cells in pairs.
+**Demonstration 3**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
 
-In example 4, the two teal cells are connected by a green line. The line is vertical and connects the two teal cells.
+Hypothesis:
+No changes from the previous demonstration.
 
-In example 5, there is only one teal cell, so no green line is added.
+**Demonstration 4**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
 
-In example 6, the two teal cells are not connected by a green line. This is because the teal cells are not aligned horizontally or vertically.
+Hypothesis:
+No changes from the previous demonstration.
 
-In example 7, the three teal cells are connected by a green line. The line is vertical and connects the teal cells in pairs.
+**Demonstration 5**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
 
-In example 8, the five teal cells are connected by green lines. The lines are vertical and horizontal and connect the teal cells in pairs.
+Hypothesis:
+No changes from the previous demonstration.
 
-The rule is to connect the teal cells with green lines if they are aligned horizontally or vertically. If they are not aligned, no green line is added.
+**Demonstration 6**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
 
-To implement this, I will:
+Hypothesis:
+No changes from the previous demonstration.
 
-1. Identify the teal cells.
-2. Check which pairs of teal cells are aligned horizontally or vertically.
-3. For each pair of teal cells that are aligned horizontally or vertically, add a green line connecting them. The green line should fill in the cells in between the teal cells (but should not overwrite the teal cells).
-4. Return the new grid.
+**Demonstration 7**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
+
+Hypothesis:
+No changes from the previous demonstration.
+
+**Demonstration 8**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration.
+
+Hypothesis:
+No changes from the previous demonstration.
+
+Final theory:
+The output is the same as the input but the white dots one the same row or column are connected by a blue line.
+
+The code should:
+1. Copy the input grid to the output grid
+2. Go through each row and connect the white dots on each row
+3. Go through each column and connect the white dots on each column
 """,
         code="""
 def transform(grid: np.ndarray) -> np.ndarray:
-    teal_color = 8
-    green_color = 3
+    # Copy the input grid to the output grid
+    output_grid = grid.copy()
 
-    # Find the teal cells
-    teal_cells = np.argwhere(grid == teal_color)
+    # Go through each row and connect the white dots on each row
+    for row in range(grid.shape[0]):
+        white_dots = np.argwhere(grid[row] == 8)
 
-    # Check pairs of teal cells for alignment
-    for i in range(len(teal_cells)):
-        for j in range(i + 1, len(teal_cells)):
-            cell1 = teal_cells[i]
-            cell2 = teal_cells[j]
+        # If less that 2 white dots, no line
+        if len(white_dots) < 2:
+            continue
 
-            if cell1[0] == cell2[0]:  # Aligned horizontally
-                row = cell1[0]
-                col_start = min(cell1[1], cell2[1]) + 1
-                col_end = max(cell1[1], cell2[1])
-                grid[row, col_start:col_end] = green_color
+        # Blue line between the two white dots
+        for i in range(white_dots[0, 0] + 1, white_dots[1, 0]):
+            output_grid[row, i] = 3
 
-            elif cell1[1] == cell2[1]:  # Aligned vertically
-                col = cell1[1]
-                row_start = min(cell1[0], cell2[0]) + 1
-                row_end = max(cell1[0], cell2[0])
-                grid[row_start:row_end, col] = green_color
+    # Go through each column and connect the white dots on each column
+    for col in range(grid.shape[1]):
+        white_dots = np.argwhere(grid[:, col] == 8)
 
-    return grid
-""",
+        # If less that 2 white dots, no line
+        if len(white_dots) < 2:
+            continue
+
+        # Blue line between the two white dots
+        for i in range(white_dots[0, 0] + 1, white_dots[1, 0]):
+            output_grid[i, col] = 3
+
+    return output_grid
+    """,
         demonstrations=[],
     ),
     Example(
         id="1f642eb9",
         reasoning="""
-The outputs always have the same shape as the inputs. The outputs are similar to the inputs, but some edits have been made.
+**Demonstration 1**
+Reasoning:
+We can see that both the input and output contain the same three distinct colored cells colored brown. grey and yellow.
+We can also see that the input and output both contain a white rectangle where it in the output is partially covered by 3 cells with the same 3 distinct colors.
+If we look at the position it looks like they are directly projected onto the white rectangle in the middle.
 
-I'll describe the changes from the input to the output in detail for each of the examples to infer the transformation rule. I'll also describe the input for each example.
+Hypothesis:
+The output is the same as the input but the 3 distinct colored cells are in addition also projected onto the white rectangle in the middle.
 
-In example 1:
+**Demonstration 2**
+Reasoning:
+Our hypothesis mainly seems to be valid for the second demonstration with one caveat. There is not only 3 distinct colored cells in the output but 5.
+It therefore doesn't seem to be depending on the number of distinct colored cells.
 
-- A new brown (color 9) cell replaces one of the teal (color 8) cells on the top left corner of a teal rectangle.
-- A new fuchsia (color 6) cell replaces a teal cell on the bottom left corner of the rectangle.
-- A new yellow (color 4) cell replaces a teal cell on the bottom right corner of the rectangle.
+Hypothesis:
+The output is the same as the input but the distinct colored cells are in addition also projected onto the white rectangle in the middle.
 
-The grid is otherwise unchanged.
+**Demonstration 3**
+Reasoning:
+Our hypothesis mainly seems to be valid for the third demonstration.
+This time the projected cells are not distinct colored cells however they are still only single cells.
 
-The input for example 1:
+Hypothesis:
+The output is the same as the input but the remaining cells are in addition also projected onto the white rectangle in the middle.
 
-- It has a teal rectangle in the middle.
-- It has a brown cell directly above the teal rectangle.
-- It has a fuchsia cell directly to the left of the teal rectangle.
-- It has a yellow cell directly below the teal rectangle.
-- The brown cell is directly above the new brown cell (in the same column).
-- The fuchsia cell is directly to the left of the new fuchsia cell (in the same row).
-- The yellow cell is directly below the new yellow cell (in the same column).
+Final theory:
+The output is the same as the input but the remaining cells are in addition also projected onto the white rectangle in the middle.
 
-In example 2:
-
-- A new orange (color 7) cell replaces a teal (color 8) cell on the top of the teal rectangle.
-- A new fuchsia cell replaces a teal cell on the top left corner of the rectangle.
-- A new purple (color 2) cell replaces a teal cell on the middle right side of the rectangle.
-- A new green (color 3) cell replaces a teal cell on the bottom left corner of the rectangle.
-- A new blue (color 1) cell replaces a teal cell on the bottom right corner of the rectangle.
-
-The input for example 2:
-
-- It has a teal rectangle in the middle.
-- It has an orange cell directly above the new orange cell (in the same column).
-- It has a fuchsia cell directly to the left of the new fuchsia cell (in the same row).
-- It has a purple cell directly to the right of the new purple cell (in the same row).
-- It has a green cell directly to the left of the new green cell (in the same row).
-- It has a blue cell directly below the new blue cell (in the same column).
-
-In example 3:
-
-- A new yellow cell replaces a teal cell on the top left corner of the teal rectangle.
-- A new fuchsia cell replaces a teal cell on the top right corner of the rectangle.
-- A new purple cell replaces a teal cell on the left side of the rectangle.
-- A new orange cell replaces a teal cell on the bottom left corner of the rectangle.
-- A new purple cell replaces a teal cell on the bottom right corner of the rectangle. This is a different change than the prior purple cell.
-- A new green cell replaces a teal cell on the left side of the rectangle.
-
-The input for example 3:
-
-- It has a teal pixel in the middle.
-- It has a yellow/fuchsia/purple/orange/purple/green cell in the same column/row as the new cell with the matching color.
-
-The input for the additional example:
-
-- It has a teal rectangle in the middle.
-- It has various colored pixels around the teal rectangle.
-
-Given these observations, we can infer the transformation rule:
-
-1. Identify a central shape (namely the teal rectangle).
-2. Look for colored cells which aren't part of the central shape.
-3. For each colored cell found around the central shape, replace a single cell on the edge of the central shape.
-4. If the colored cell is above/below the central shape, replace the top/bottom (respectively) cell in the same column on the central shape with the colored cell.
-5. If the colored cell is to the left/right of the central shape, replace the left/right cell in the same row on the central shape with the colored cell.
+The code should:
+1. Copy the input grid to the output grid
+2. Identify the white rectangle
+3. Identify the remaining cells in the input
+4. Project the remaining cells onto the white rectangle
 """,
         code="""
 def transform(grid: np.ndarray) -> np.ndarray:
-    teal_color = 8
+    # Copy the input grid to the output grid
+    output_grid = grid.copy()
+    
+    # Identify the white rectangle
+    white_rectangle = np.argwhere(grid == 8)
+    min_row, min_col = np.min(white_rectangle, axis=0)
+    max_row, max_col = np.max(white_rectangle, axis=0)
+    
+    # Identify the remaining cells in the input
+    remaining_cells = np.argwhere((grid != 0) & (grid != 8))
+    
+    # Project the remaining cells onto the white rectangle
+    for cell in remaining_cells:
+        row, col = cell
+        if row < min_row:
+            output_grid[min_row, col] = grid[row, col]
+        elif row > max_row:
+            output_grid[max_row, col] = grid[row, col]
+        elif col < min_col:
+            output_grid[row, min_col] = grid[row, col]
+        elif col > max_col:
+            output_grid[row, max_col] = grid[row, col]
 
-    # Find the bounding box of the teal rectangle
-    teal_shape = np.argwhere(grid == teal_color)
-    min_row, min_col = np.min(teal_shape, axis=0)
-    max_row, max_col = np.max(teal_shape, axis=0)
-
-    # Iterate over the grid to find colored cells around the teal rectangle
-    rows, cols = grid.shape
-    for row in range(rows):
-        for col in range(cols):
-            color = grid[row, col]
-            if color != 0 and color != teal_color:
-                # If the colored cell is above/below the central shape
-                if col >= min_col and col <= max_col:
-                    if row < min_row:
-                        grid[min_row, col] = color
-                    elif row > max_row:
-                        grid[max_row, col] = color
-                # If the colored cell is to the left/right of the central shape
-                if row >= min_row and row <= max_row:
-                    if col < min_col:
-                        grid[row, min_col] = color
-                    elif col > max_col:
-                        grid[row, max_col] = color
-
-    return grid
-""",
+    return output_grid
+    """,
         demonstrations=[],
     ),
     Example(
         id="a5313dff",
         reasoning="""
-The outputs always have the same shape as the inputs. The outputs are similar to the inputs, but some edits have been made.
+**Demonstration 1**
+Reasoning:
+We can see that the input and output both contain the same green shape.
+In the output the interior is however colored red.
 
-I'll describe the changes from the input to the output in detail for each of the examples to infer the transformation rule. I'll also describe the input for each example.
+Hypothesis:
+The output is the same as the input but the interior of the green shape is colored red.
 
-In example 1, the input has a purple outline forming a square with an inner black region. The output has the same purple outline but the inner region has been filled with blue. The change in this case is filling the innermost black region with blue.
+**Demonstration 2**
+Reasoning:
+Our hypothesis seems to be valid for the second demonstration however with one caveat.
+If the green shape is not "closed" (i.e. it has a hole in it) then interior doesn't change
 
-In example 2, the input has a more complex purple shape with several inner black regions. The output shows that the innermost black region of a continuous block of black cells, bounded by purple cells, has been filled with blue. There is a another black region in the input in the top left corner which is surronded by purple cells but which also touches the edge of the grid. This region is not filled with blue in the output. So, the transformation seems to be to fill the black regions which are fully bounded by purple cells with blue. It doesn't count if the black region touches the edge of the grid and thus isn't fully bounded by purple cells.
+Hypothesis:
+The output is the same as the input but the interior of the green shape is colored red but only if the shape is "closed".
 
-In example 3, the input is a more extended purple border. The inner black regions bound by purple cells are filled with blue. There is a black region in the bottom right which borders the bottom edge of the grid. This region is not filled with blue in the output.
+**Demonstration 3**
+Reasoning:
+Our hypothesis seems to be valid for the third demonstration however with one caveat.
+There seems to be possible that there more than one "hole" in the green shape.
 
-The transformation consists of:
+Hypothesis:
+The output is the same as the input but all the "holes" of the green shape is colored red but only if the shape is "closed".
 
-1. Identifying regions fully enclosed by purple cells. (Not including regions that touch the edge of the grid.)
-2. Filling the identified regions with blue (color 1).
+Final theory:
+The output is the same as the input but all the "holes" of the green shape is colored red but only if the shape is "closed".
 
-Let's break it down into steps and ensure the analysis and transformation rules are clear:
-
-1. **Region Identification**:
-   - Identify all black regions (0) enclosed by purple cells (2).
-   - Ensure the black regions do not touch the edge of the grid, since such regions are not enclosed entirely by purple cells.
-
-2. **Filling the Regions**:
-   - Replace all the cells in the correctly identified black regions with blue (1).
-
-To efficiently find all connected components in the grid and check if they are completely enclosed by purple cells, we can use the concept of connected components using BFS or DFS and boundary checks.
-
-**Algorithm Steps**:
-1. For each black region, use BFS or DFS to explore the connected component of black cells (0).
-2. Check if the boundary of the connected component only consists of purple cells (2).
-3. If the component is fully enclosed by purple cells and doesn't touch the grid edges, fill it with blue (1).
-""",
+The code should:
+1. Copy the input grid to the output grid
+2. Identify the green shape
+3. Identify the "holes" of the green shape
+4. Color the "holes" red
+    """,
         code="""
-from collections import deque
-
-def is_enclosed_by_purple(grid, comp, color_purple, color_black):
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
-    rows, cols = grid.shape
-    for cell in comp:
-        r, c = cell
-        for dr, dc in directions:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < rows and 0 <= nc < cols:
-                if grid[nr, nc] != color_purple and grid[nr, nc] != color_black:
-                    return False
-            else:
-                return False  # touches grid edge
-    return True
-
-def bfs(grid, start, color_black):
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
-    rows, cols = grid.shape
-    comp = []
-    queue = deque([start])
-    visited = set()
-    visited.add(start)
-
-    while queue:
-        r, c = queue.pop()
-        comp.append((r, c))
-
-        for dr, dc in directions:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < rows and 0 <= nc < cols and grid[nr, nc] == color_black and (nr, nc) not in visited:
-                queue.appendleft((nr, nc))
-                visited.add((nr, nc))
-
-    return comp
+from scipy.ndimage import binary_fill_holes
 
 def transform(grid: np.ndarray) -> np.ndarray:
-    color_purple = 2
-    color_black = 0
-    color_blue = 1
+    # Copy the input grid to the output grid
+    output_grid = grid.copy()
 
-    rows, cols = grid.shape
+    # Identify the green shape
+    green_shape_mask = grid == 2
+    
+    # Identify the "holes" of the green shape
+    filled_interior = binary_fill_holes(green_shape_mask)
 
-    visited = set()
-    for r in range(rows):
-        for c in range(cols):
-            if grid[r, c] == color_black and (r, c) not in visited:
-                comp = bfs(grid, (r, c), color_black)
-                visited.update(comp)
+    # Set the interior of the shape to 1 (red)
+    output_grid[(filled_interior) & (~green_shape_mask)] = 1
 
-                if is_enclosed_by_purple(grid, comp, color_purple, color_black):
-                    for cell in comp:
-                        grid[cell] = color_blue
-
-    return grid
-""",
+    return output_grid
+    """,
         demonstrations=[],
     ),
     Example(
         id="fcb5c309",
         reasoning="""
-The outputs don't match the shapes of the inputs. The outputs are an edited subset of the input. At least they appear to be that.
+**Demonstration 1**
+Reasoning:
+We can see that output shape is also present in the input.
+In the input is however colored both green and yellow where in the output is it only yellow.
+Why is it the yellow color and not green?
+It might be due to the boundary color of the shape is green where the interior is yellow.
+How do we know which shape to choose from the input?
+Based on the input logical choices could be either of the green rectangles, so why is it the one on the left?
+Might be because it is bigger than the one on the right.
+Could also be because it has something inside it which then choose the color change.
+We will go with the latter option since it would make the color changing rule more consistent.
 
-I'll describe the changes from the input to the output in detail for each of the examples to infer the transformation rule. I'll also describe the input for each example.
+Hypothesis:
+The green rectangle with some interior is copied to the output and the boundary of the shape is colored the same color as the interior.
 
-In example 1:
+**Demonstration 2**
+Reasoning:
+Our hypothesis seems to mostly be valid. However this time the chosen shape is red and not green.
+So the choice must be independent of the color of the rectangles.
+This time both rectangles however have something inside them. However the one that is chosen has "more" inside it.
+It however still could be the largest shape.
 
-- The input contains two purple (color 2) rectangles.
-- The input contains various yellow (color 4) cells scattered around.
-- The output is the larger purple rectangle extracted but just the inside extracted and with an added yellow border around the extracted insides.
+Hypothesis:
+The rectangle with the most cells inside it is copied to the output and its boundary is colored the same color as its interior.
 
-In example 2:
+**Demonstration 3**
+Reasoning:
+Our hypothesis seems to be valid.
 
-- The input contains two blue (color 1) rectangles.
-- The input contains various green (color 3) cells scattered around.
-- The output is the larger blue rectangle extracted but just the inside extracted and with an added green border around the extracted insides.
+Hypothesis:
+No changes from the previous demonstration.
 
-In example 3:
+Final theory:
+The rectangle with the most cells inside it is copied to the output and its boundary is colored the same color as its interior.
 
-- The input contains three green (color 3) rectangles.
-- The input contains various purple (color 2) cells scattered around.
-- The output is the larger green rectangle extracted but just the inside extracted and with an added purple border around the extracted insides.
+Code implementation:
+To make it easier to find rectangles we could just relax this to find continous shapes instead and see how many other colored cells there is within its bounds.
 
-By comparing the outputs and descriptions of the inputs, the inferred transformation rule can be described as:
-
-1. Identify the color group outlines (the rectangles).
-2. Extract the cells within the largest rectangle and find the dimensions of the included area (removing the outer border).
-3. Add a colored border (based on the scattered colored points inside and outside the boundary) around the identified outlined region.
-4. Return the new grid.
-
-The output images are always filled with borders that contain a single color and a colored outline.
-""",
+The code should:
+1. Find all continous shapes
+2. Find the one with the most other colored cells within its bounds
+3. Copy it to the output
+4. Color the boundary of the rectangle the same color as its interior
+    """,
         code="""
+from scipy.ndimage import label
+
+def find_contiguous_shapes(grid, color):
+    labeled_array, num_features = label(grid == color)
+    shapes = []
+    for i in range(1, num_features + 1):
+        shapes.append(np.argwhere(labeled_array == i))
+    return shapes
+
 def transform(grid: np.ndarray) -> np.ndarray:
+    # Find all continous shapes
+    shapes = []
+    for color in range(1, 10):
+        shapes.extend(find_contiguous_shapes(grid, color))
 
-    def find_largest_rectangle(grid, color):
-        # Label contiguous regions of the given color
-        labeled_array, num_features = label(grid == color)
+    # Find the one with the most other colored cells within its bounds
+    max_shape = None
+    max_other_cells = -1
+    inside_color = None
+    for shape in shapes:
+        min_row, min_col = np.min(shape, axis=0)
+        max_row, max_col = np.max(shape, axis=0)
+        color = grid[min_row, min_col]
+        # Map the shape to the original grid
+        shape_in_grid = grid[min_row:max_row+1, min_col:max_col+1]
+        amount_of_other_cells = np.sum((shape_in_grid != color) & (shape_in_grid != 0))
+        if amount_of_other_cells > max_other_cells:
+            max_other_cells = amount_of_other_cells
+            max_shape = shape_in_grid
+            # Count the amount of each color in the shape
+            color_counts = np.bincount(shape_in_grid.flatten())
+            color_counts[color] = 0  # Exclude the current shape's color
+            color_counts[0] = 0  # Exclude background color
+            inside_color = np.argmax(color_counts) if np.max(color_counts) > 0 else None
 
-        max_size = 0
-        max_coords = (0, 0, 0, 0)  # top, bottom, left, right
-
-        for i in range(1, num_features + 1):
-            coords = np.argwhere(labeled_array == i)
-            top, left = np.min(coords, axis=0)
-            bottom, right = np.max(coords, axis=0)
-            size = (bottom - top + 1) * (right - left + 1)
-            if size > max_size:
-                max_size = size
-                max_coords = (top, bottom, left, right)
-
-        return max_coords
-
-    # Identify the unique colors (excluding black 0)
-    unique_colors = np.setdiff1d(np.unique(grid), [0])
-
-    max_area = 0
-    chosen_color = None
-    chosen_coords = None
-
-    for color in unique_colors:
-        top, bottom, left, right = find_largest_rectangle(grid, color)
-        area = (bottom - top + 1) * (right - left + 1)
-        if area > max_area:
-            max_area = area
-            chosen_color = color
-            chosen_coords = (top, bottom, left, right)
-
-    if chosen_coords is None:
-        return grid_lst
-
-    top, bottom, left, right = chosen_coords
-
-    # Extract the region inside the chosen rectangle (excluding the border) and the dimensions
-    region = grid[top + 1: bottom, left + 1: right]
-
-    # Border color
-    inner_points_color = unique_colors[unique_colors != chosen_color][0]
-
-    border_region = np.pad(region, pad_width=1, mode='constant', constant_values=inner_points_color)
-
-    return border_region
-""",
+    for x in range(max_shape.shape[0]):
+        for y in range(max_shape.shape[1]):
+            if max_shape[x, y] != 0:
+                max_shape[x, y] = inside_color
+        
+    return max_shape
+    """,
         demonstrations=[],
     ),
     Example(
         id="67a3c6ac",
         reasoning="""
-The outputs always have the same shape as the inputs, and the cells are essentially rearranged. Let's analyze each example to see if we can identify the systematic transformation rule.
+**Demonstration 1**
+Reasoning:
+It seems like the transformation is simply flipping the grid over its vertical center.
 
-**Example 1:**
+Hypothesis:
+The output is the same as the input but flipped over its vertical center.
 
-- The columns in the input matrix have been swapped, giving a specific transformation.
-- The first column in the output is the last column of the input.
-- The last column in the output is the first column of the input.
-- The middle columns are flipped.
-- The columns are flipped over the center vertical line.
+**Demonstration 2**
+Reasoning:
+Our hypothesis seems to be valid.
 
-**Example 2:**
+Hypothesis:
+The output is the same as the input but flipped over its vertical center.
 
-- The same pattern is observed.
+**Demonstration 3**
+Reasoning:
+Our hypothesis seems to be valid.
 
-**Example 3:**
+Hypothesis:
+The output is the same as the input but flipped over its vertical center.
 
-- The columns are swapped again, which follows the same transformation rule derived for previous examples.
+Final theory:
+The output is the same as the input but flipped over its vertical center.
 
-The transformation rule is to flip the columns over the center vertical line. The first column becomes the last column, the last column becomes the first column, the second column becomes the second-to-last column, and so on.
-""",
+The code should:
+1. Flip the grid over its vertical center
+    """,
         code="""
 def transform(grid: np.ndarray) -> np.ndarray:
-
-    # Reverse the columns, flipping over the center vertical line
-    transformed_grid = np.fliplr(grid)
-
-    return transformed_grid
-""",
+    # Flip the grid over its vertical center
+    return np.fliplr(grid)
+    """,
         demonstrations=[],
     ),
     Example(
         id="2dc579da",
         reasoning="""
-The outputs have variable sizes and are significantly smaller than the inputs.
+**Demonstration 1**
+Reasoning:
+It looks like the output is simply the bottom leftmost 2x2 square.
 
-The outputs appear to each contain a colored cell from the inputs. The rest of the cells in the outputs contain the color which was directly adjacent to the cell.
+Hypothesis:
+The output is the same as the input but with a square in the center.
 
-I'll reason through examples in further detail to infer the transformation rule.
+**Demonstration 2**
+Reasoning:
+This demonstrations disproves our previous hypothesis.
+However we can see that the cross again divides the grid into 4 squares where the output is the one with more than 1 distinct colored cell.
 
-In Example 1:
-- The input grid has a yellow (4) cell at the bottom left corner (row 4, column 0).
-- The adjacent color to this cell, to its immediate right, is teal (8).
-- The output grid contains this yellow cell and the rest of the cells are teal (8).
+Hypothesis:
+The input is divided into 4 square by a cross where the output is the square with more than 1 distinct colored cell.
 
-In Example 2:
-- The input grid has a single blue (1) cell at position (row 1, column 5).
-- The adjacent color to this cell is always yellow (4).
+**Demonstration 3**
+Reasoning:
+Our hypothesis seems to be valid.
 
-In Example 3:
-- The input grid has one teal (8) cell located at (row 2, column 1).
-- All the adjacent colors around it are light green (3).
+Hypothesis:
+No changes from the previous demonstration.
 
-The rule seems to be to identify a unique color cell in a larger square formed by a larger colored cross-shape. Then, the output grid size matches the size of this larger square. The output grid includes all the cells that were in the surrounding square.
+Final theory:
+The input is divided into 4 square by a cross where the output is the square with more than 1 distinct colored cell.
 
-Let's deduce clear steps:
-1. Identify the unique color cell which occurs only once (S).
-2. Identify the surrounding color (C) adjacent to S.
-3. Find the square which surrounds S (where other cells are colored with C). This square can be found by expanding from S in all directions until the color changes from C or an edge is reached.
-4. Return a grid with the contents of this square. The output grid size will match the size of this square.
+The code should:
+1. Divide the grid into 4 squares by a cross
+2. Return the square with the most other colored cells within its bounds
 """,
         code="""
-def transform(grid: np.ndarray) -> np.ndarray:    
+def transform(grid: np.ndarray) -> np.ndarray:
+    # Divide the grid into 4 squares by a cross
     rows, cols = grid.shape
-    
-    unique_colors = np.unique(grid)
-    
-    # Identify the unique color cell (S) which occurs only once
-    for color in unique_colors:
-        if np.sum(grid == color) == 1:
-            unique_color = color
-            break
-    
-    unique_pos = tuple(map(int, np.argwhere(grid == unique_color)[0]))
-    
-    # Identify the surrounding color (C) adjacent to S
-    adjacents = [(unique_pos[0] + i, unique_pos[1] + j) 
-                 for i, j in [(-1, 0), (1, 0), (0, -1), (0, 1)] 
-                 if 0 <= unique_pos[0] + i < rows and 0 <= unique_pos[1] + j < cols]
-    
-    surrounding_color = None
-    for (i, j) in adjacents:
-        if grid[i, j] != unique_color:
-            surrounding_color = grid[i, j]
-            break
-            
-    if surrounding_color is None:
-        raise ValueError("No valid surrounding color found")
+    center_row, center_col = rows // 2, cols // 2
+    top_left = grid[:center_row, :center_col]
+    top_right = grid[:center_row, center_col+1:]
+    bottom_left = grid[center_row+1:, :center_col]
+    bottom_right = grid[center_row+1:, center_col+1:]
 
-    # Find the square dimensions around the unique cell
-    top, bottom, left, right = unique_pos[0], unique_pos[0], unique_pos[1], unique_pos[1]
-    
-    while top > 0 and grid[top - 1, unique_pos[1]] == surrounding_color:
-        top -= 1
-    while bottom < rows - 1 and grid[bottom + 1, unique_pos[1]] == surrounding_color:
-        bottom += 1
-    while left > 0 and grid[unique_pos[0], left - 1] == surrounding_color:
-        left -= 1
-    while right < cols - 1 and grid[unique_pos[0], right + 1] == surrounding_color:
-        right += 1
+    # Find the square with the most other colored cells within its bounds
+    squares = [top_left, top_right, bottom_left, bottom_right]
+    square_counts = [np.sum(np.unique(square, return_counts=True)[1][1:]) for square in squares]
 
-    # Extract the square and return it
-    return grid[top:bottom + 1, left:right + 1]
-""",
+    return squares[np.argmax(square_counts)]
+    """,
         demonstrations=[],
     ),
 ]
