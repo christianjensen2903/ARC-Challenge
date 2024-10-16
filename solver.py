@@ -25,7 +25,6 @@ class Solver(ABC):
         self.base_prompt_builder = BasePromptBuilder(formatter)
         self.num_examples = num_examples
         self.examples = examples[: self.num_examples]
-        self.k = 2
 
     @abstractmethod
     def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
@@ -69,7 +68,8 @@ class COTSolver(Solver):
     ):
         super().__init__(model, formatter, num_examples)
         self.num_solutions = num_solutions
-        self.accuracy_cutoff_pct = 50
+        self.k = 6
+        self.accuracy_cutoff_pct = 10
         self.cost = 0.0
 
     def _predict(
@@ -236,25 +236,34 @@ Stderr:
     def _rank_solutions(
         self, demonstrations: list[Demonstration], solutions: list[str]
     ) -> list[dict]:
+
         predictions = self._get_predictions(demonstrations, solutions)
         scores = self._score_solutions(demonstrations, predictions)
 
-        top_indices = self._get_top_indices(scores)
-        top_predictions = [predictions[i] for i in top_indices]
-        top_solutions = [solutions[i] for i in top_indices]
-        top_scores = [scores[i] for i in top_indices]
-
-        diversity_matrix = self._get_diversity_matrix(top_predictions)
-        kmeans = KMeans(n_clusters=self.k, random_state=0).fit(diversity_matrix)
-
         diverse_solutions: list[str] = []
         diverse_scores: list[float] = []
-        for i in range(self.k):
-            cluster_indices = np.where(kmeans.labels_ == i)[0].astype(int)
-            cluster_solutions = [top_solutions[i] for i in cluster_indices]
-            cluster_scores = [top_scores[i] for i in cluster_indices]
-            diverse_solutions.append(cluster_solutions[np.argmin(cluster_scores)])
-            diverse_scores.append(np.min(cluster_scores))
+        if len(solutions) <= self.k:
+            diverse_solutions = solutions
+            diverse_scores = scores
+        else:
+            top_indices = self._get_top_indices(scores)
+
+            top_predictions = [predictions[i] for i in top_indices]
+            top_solutions = [solutions[i] for i in top_indices]
+            top_scores = [scores[i] for i in top_indices]
+
+            diversity_matrix = self._get_diversity_matrix(top_predictions)
+            kmeans = KMeans(n_clusters=self.k, random_state=0).fit(diversity_matrix)
+
+            for i in range(self.k):
+                cluster_indices = np.where(kmeans.labels_ == i)[0].astype(int)
+                cluster_solutions = [top_solutions[i] for i in cluster_indices]
+                cluster_scores = [top_scores[i] for i in cluster_indices]
+                if len(cluster_solutions) == 0 or len(cluster_scores) == 0:
+                    continue
+
+                diverse_solutions.append(cluster_solutions[np.argmin(cluster_scores)])
+                diverse_scores.append(np.min(cluster_scores))
 
         ranks = np.argsort(diverse_scores)
         return [
