@@ -74,12 +74,16 @@ class EmojisDemonstrations(DemonstrationFormatter):
     def char_to_text(self, char: int) -> str:
         return self.letter_lookup[char]
 
+    def _get_column_names(self, width: int) -> str:
+        column_names = "    "
+        for i in range(width):
+            column_names += self.column_names[i]
+            column_names += "  " if len(self.column_names[i]) == 1 else " "
+        return column_names
+
     def grid_to_text(self, grid: np.ndarray) -> str:
         height, width = grid.shape
-        grid_str = "    "
-        for i in range(width):
-            grid_str += self.column_names[i]
-            grid_str += "  " if len(self.column_names[i]) == 1 else " "
+        grid_str = self._get_column_names(width)
         grid_str += "\n"
 
         for i, row in enumerate(grid):
@@ -87,7 +91,9 @@ class EmojisDemonstrations(DemonstrationFormatter):
             for value in row:
                 char = self.char_to_text(value)
                 text_row += f"{char}|"
-            grid_str += text_row + "\n"
+            grid_str += text_row + " " + self.row_names[i] + "\n"
+
+        grid_str += self._get_column_names(width)
 
         return grid_str
 
