@@ -9,6 +9,7 @@ from demonstration_formatter import (
     EmojisDemonstrations,
     ShapeExtractionWrapper,
     DifferenceWrapper,
+    RotateWrapper,
 )
 import numpy as np
 from solver import Solver, COTSolver
@@ -127,12 +128,15 @@ class Pipeline:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    model = ChatOpenAI(model="gpt-4o-mini")
-    formatter = EmojisDemonstrations()
-    solver = COTSolver(model, formatter=formatter)
+    model = ChatOpenAI(model="gpt-4o")
+    formatter: DemonstrationFormatter = EmojisDemonstrations()
+    # formatter = RotateWrapper(formatter)
+    # formatter = ShapeExtractionWrapper(formatter)
+    # formatter = DifferenceWrapper(formatter)
+    solver = COTSolver(model, formatter=formatter, num_examples=4, num_solutions=4)
 
-    train = False
-    id = "00576224"
+    train = True
+    id = "05f2a901"
     challenges, solutions = load_data(train)
 
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver, train=train)

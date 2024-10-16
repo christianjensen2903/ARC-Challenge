@@ -31,6 +31,9 @@ class DemonstrationFormatter(ABC):
     def get_description(self, demonstrations: list[Demonstration]) -> str:
         pass
 
+    def extra_helper_text(self, demonstrations: list[Demonstration]) -> str:
+        return ""
+
 
 class RawDemonstrations(DemonstrationFormatter):
 
@@ -376,6 +379,59 @@ For instance, if element1 changes to element2 at A1 A2 B7, this would be represe
         return prompt_extension
 
 
+class RotateWrapper(DemonstrationFormatter):
+    """
+    Add the rotated version of the output grid to the demonstrations.
+    """
+
+    def __init__(self, formatter: DemonstrationFormatter):
+        super().__init__()
+        self.formatter = formatter
+
+    def char_to_text(self, char: int) -> str:
+        return self.formatter.char_to_text(char)
+
+    def grid_to_text(self, grid: np.ndarray) -> str:
+        return self.formatter.grid_to_text(grid)
+
+    def format(self, demonstrations: list[Demonstration]) -> str:
+        formatted_demonstrations = self.formatter.format(demonstrations)
+        return formatted_demonstrations
+
+    def get_description(self, demonstrations: list[Demonstration]) -> str:
+        prompt_extension = self.formatter.get_description(demonstrations)
+
+        prompt_extension += """
+In addition to the grids, you will be shown the rotated versions (90 degrees clockwise) of the input and output grids.
+"""
+
+        return prompt_extension
+
+    def extra_helper_text(self, demonstrations: list[Demonstration]) -> str:
+
+        helper_text = self.formatter.extra_helper_text(demonstrations)
+        helper_text += """
+Here are the rotated versions (90 degrees clockwise) of the input and output grids:\n
+"""
+
+        for i, demonstration in enumerate(demonstrations):
+            input_grid = demonstration.input
+            output_grid = demonstration.output
+
+            input_grid_90 = np.rot90(input_grid)
+            output_grid_90 = np.rot90(output_grid)
+
+            helper_text += f"Demonstration {i+1}:\n"
+            helper_text += f"Input:\n"
+            helper_text += self.grid_to_text(input_grid_90) + "\n"
+            helper_text += f"\nOutput:\n"
+            helper_text += self.grid_to_text(output_grid_90) + "\n"
+
+            helper_text += "\n"
+
+        return helper_text
+
+
 if __name__ == "__main__":
     emoji_formatter = EmojisDemonstrations()
 
@@ -399,3 +455,6 @@ if __name__ == "__main__":
 
     difference_formatter = DifferenceWrapper(emoji_formatter)
     print(difference_formatter.format(demonstrations))
+
+    rotate_formatter = RotateWrapper(emoji_formatter)
+    print(rotate_formatter.extra_helper_text(demonstrations))

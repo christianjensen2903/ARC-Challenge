@@ -130,41 +130,7 @@ Let's implement it in code.
 Please solve the following puzzle.
 {formatted_demonstrations}
 
-Remember to answer in the format:
-<reasoning>
-**Demonstration 1**
-Reasoning:
-...
-
-Hypothesis:
-...
-
-**Demonstration 2**
-Reasoning:
-...
-
-Hypothesis:
-...
-
-...
-
-**Demonstration n**
-Reasoning:
-...
-
-Hypothesis:
-...
-
-Final theory:
-...
-
-The code should:
-...
-
-</reasoning>
-```python
-...
-```
+{self.formatter.extra_helper_text(demonstrations)}
 """
 
         raw_solutions, cost = self.generate(

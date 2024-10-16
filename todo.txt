@@ -1,8 +1,8 @@
+- Extract shapes that has something in common in the input & output and explain the difference
+- Give it images. Maybe highlight the differences
+
 - Try to give image (check cost vs. accuracy)
 - Try to give standard library (look at previous solutions and video of team)
-- Try to mess with base prompt
-    - Try to give shape sizes
-    - Try to look for shapes that are in both input and output i.e. if in input check if also in output and vice versa
 
 - Make "beam" search. Reitereate on the best solutions n times or a solution is found
 - Majority vote on solutions that are equally good (kind of self-consistency)
