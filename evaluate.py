@@ -11,6 +11,7 @@ from demonstration_formatter import (
 from solver import COTSolver
 import numpy as np
 from langsmith import traceable
+from tqdm import tqdm  # type: ignore
 
 
 @traceable(name="evaluate")
@@ -24,7 +25,7 @@ def evaluate(pipeline: Pipeline, n: int = 5) -> tuple[float, float]:
     ids = list(challenges.keys())
     correct = 0
     cost = 0.0
-    for i in range(n):
+    for i in tqdm(range(n)):
         id = ids[i]
         prediction, cost = pipeline.solve(id)
         solution = np.array(solutions[id][0])
@@ -38,8 +39,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.ERROR)
     model = ChatOpenAI(model="gpt-4o-mini")
     formatter = EmojisDemonstrations()
-    solver = COTSolver(model, formatter=formatter)
+    solver = COTSolver(model, formatter=formatter, num_examples=8, num_solutions=128)
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
-    accuracy, avg_cost = evaluate(pipeline)
+    accuracy, avg_cost = evaluate(pipeline, n=50)
     print(f"Accuracy: {accuracy}")
     print(f"Average cost: {avg_cost}")
