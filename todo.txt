@@ -1,7 +1,9 @@
 - Extract shapes that has something in common in the input & output and explain the difference
 - Give it images. Maybe highlight the differences
-
 - Try to give image (check cost vs. accuracy)
+
+- Try to reread the question
+
 - Try to give standard library (look at previous solutions and video of team)
 
 - Make "beam" search. Reitereate on the best solutions n times or a solution is found
@@ -9,3 +11,5 @@
 - Recolor inputs. Maybe more advanced as in https://www.kaggle.com/competitions/abstraction-and-reasoning-challenge/discussion/154597
 - Maybe flip inputs. Would maybe make it easier to see what column and rows
 - Bucket examples into same grid size or not same grid size
+
+- Try instead of for example doing 128 with the same input. Split into "smaller" batches where they all have the same random flip/rotation/shuffle of demonstrations
