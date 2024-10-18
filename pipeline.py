@@ -129,7 +129,7 @@ class Pipeline:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    model = GPT4()
+    model = GPT4(mini=True)
     formatter: DemonstrationFormatter = EmojisDemonstrations()
     # formatter = RotateWrapper(formatter)
     formatter = ShapeExtractionWrapper(formatter)
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     solver = COTSolver(model, formatter=formatter, num_examples=4, num_solutions=4)
 
     train = True
-    id = "05f2a901"
+    id = "007bbfb7"
     challenges, solutions = load_data(train)
 
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver, train=train)

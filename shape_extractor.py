@@ -158,7 +158,7 @@ class ShapeExtractor:
                 for match in matches:
                     to_locations.append(self._get_shape_bounds_text(match))
                 to_locations_str = ", ".join(to_locations)
-                description = f"Is duplicated from {self._get_shape_bounds_text(input_shape)} to {to_locations_str}"
+                description = f"Is duplicated {len(matches)} times from {self._get_shape_bounds_text(input_shape)} to {to_locations_str}"
             interesting_shapes.append((input_shape, description))
 
         return interesting_shapes
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     with open("data/arc-agi_training_challenges.json") as f:
         challenges = json.load(f)
 
-    example_id = "05f2a901"
+    example_id = "007bbfb7"
     challenge = challenges[example_id]["train"]
     demonstrations = [
         Demonstration(input=np.array(grids["input"]), output=np.array(grids["output"]))

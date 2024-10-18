@@ -44,11 +44,13 @@ class COTSolver(Solver):
         formatter: DemonstrationFormatter,
         num_examples: int = 2,
         num_solutions: int = 16,
+        pass_image: bool = False,
     ):
         super().__init__(model, formatter, num_examples)
         self.num_solutions = num_solutions
         self.k = 6
         self.accuracy_cutoff_pct = 10
+        self.pass_image = pass_image
 
     def _predict(
         self, demonstrations: list[Demonstration], solution: str
@@ -108,18 +110,23 @@ Please solve the following puzzle.
 {formatted_demonstrations}
 
 {self.formatter.extra_helper_text(demonstrations)}
-
-I will also provide with an image of the the demonstrations.
 """
+
+        if self.pass_image:
+            prompt += f"""
+I will also provide with an image of the demonstrations.
+"""
+        content = [
+            {"type": "text", "text": prompt},
+        ]
+        if self.pass_image:
+            content.append(demonstrations_to_oai_content(demonstrations))
 
         messages = [
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    # demonstrations_to_oai_content(demonstrations),
-                ],
+                "content": content,
             },
         ]
 
