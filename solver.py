@@ -12,6 +12,7 @@ from langsmith import traceable
 from sklearn.cluster import KMeans  # type: ignore
 import random
 from llm import LLM
+from render import demonstrations_to_oai_content
 
 
 class Solver(ABC):
@@ -111,11 +112,19 @@ Please solve the following puzzle.
 {formatted_demonstrations}
 
 {self.formatter.extra_helper_text(demonstrations)}
+
+I will also provide with an image of the the demonstrations.
 """
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    demonstrations_to_oai_content(demonstrations),
+                ],
+            },
         ]
 
         raw_solutions = self.model.generate_from_messages(

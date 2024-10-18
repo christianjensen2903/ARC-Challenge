@@ -12,7 +12,7 @@ class LLM(ABC):
     @abstractmethod
     def generate_from_messages(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, str | list[dict]]],
         n: int = 1,
     ) -> list[str]:
         pass
@@ -27,7 +27,7 @@ class GPT4(LLM):
         return self.generate_from_messages([{"role": "user", "content": prompt}], n)
 
     def generate_from_messages(
-        self, messages: list[dict[str, str]], n: int = 1
+        self, messages: list[dict[str, str | list[dict]]], n: int = 1
     ) -> list[str]:
         response = self.client.chat.completions.create(
             model="gpt-4o-mini", messages=messages, n=n
