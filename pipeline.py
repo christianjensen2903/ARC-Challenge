@@ -15,6 +15,7 @@ import numpy as np
 from solver import Solver, COTSolver
 from run_program import run_program
 from langsmith import traceable
+from llm import LLM, GPT4
 
 dotenv.load_dotenv()
 
@@ -73,7 +74,7 @@ class Pipeline:
         return demonstrations
 
     @traceable(name="call_model")
-    def _call_model(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
+    def _call_model(self, demonstrations: list[Demonstration]) -> str:
         logging.info("Calling model")
         return self.solver.solve(demonstrations)
 
@@ -115,20 +116,20 @@ class Pipeline:
         return Demonstration(input=input, output=output)
 
     @traceable(name="solve")
-    def solve(self, id: str) -> tuple[np.ndarray, float]:
+    def solve(self, id: str) -> np.ndarray:
         demonstrations = self._load_demonstrations(id)
-        solution, cost = self._call_model(demonstrations)
+        solution = self._call_model(demonstrations)
         test_demonstration: Demonstration = self._load_test_demonstration(id)
         output: dict[str, str | np.ndarray] = self._run_program(
             solution, test_demonstration.input
         )
         assert isinstance(output["prediction"], np.ndarray)
-        return output["prediction"], cost
+        return output["prediction"]
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    model = ChatOpenAI(model="gpt-4o")
+    model = GPT4()
     formatter: DemonstrationFormatter = EmojisDemonstrations()
     # formatter = RotateWrapper(formatter)
     # formatter = ShapeExtractionWrapper(formatter)
@@ -141,7 +142,7 @@ if __name__ == "__main__":
 
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver, train=train)
     input = np.array(challenges[id]["test"][0]["input"])
-    prediction, cost = pipeline.solve(id)
+    prediction = pipeline.solve(id)
     solution = np.array(solutions[id][0])
     formatted_input = formatter.grid_to_text(input)
     formatted_solution = formatter.grid_to_text(solution)
@@ -157,6 +158,3 @@ if __name__ == "__main__":
 
     print("Correct:")
     print(np.array_equal(prediction, solution))
-
-    print("Cost:")
-    print(cost)

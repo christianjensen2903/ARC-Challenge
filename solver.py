@@ -11,13 +11,14 @@ import numpy as np
 from langsmith import traceable
 from sklearn.cluster import KMeans  # type: ignore
 import random
+from llm import LLM
 
 
 class Solver(ABC):
 
     def __init__(
         self,
-        model: BaseChatModel,
+        model: LLM,
         formatter: DemonstrationFormatter,
         num_examples: int = 2,
     ):
@@ -28,31 +29,11 @@ class Solver(ABC):
         self.examples = examples[: self.num_examples]
 
     @abstractmethod
-    def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
+    def solve(self, demonstrations: list[Demonstration]) -> str:
         """
         Solves the puzzle and returns the solution and the cost of the solution
         """
         pass
-
-    def generate(
-        self, prompt: str, system_prompt: str | None = None, n: int = 1
-    ) -> tuple[list[str], float]:
-        messages: list[BaseMessage] = []
-        if system_prompt is not None:
-            messages.append(SystemMessage(content=system_prompt))
-
-        messages.append(HumanMessage(content=prompt))
-
-        responses: list[str] = []
-        with get_openai_callback() as cb:
-            response = self.model.generate([messages], n=n)
-            if isinstance(response.generations, list) and len(response.generations) > 0:
-                for r in response.generations[0]:
-                    if isinstance(r, ChatGeneration):
-                        responses.append(r.text)
-            cost = cb.total_cost
-
-        return responses, cost
 
 
 class COTSolver(Solver):
@@ -62,7 +43,7 @@ class COTSolver(Solver):
 
     def __init__(
         self,
-        model: BaseChatModel,
+        model: LLM,
         formatter: DemonstrationFormatter,
         num_examples: int = 2,
         num_solutions: int = 16,
@@ -71,7 +52,6 @@ class COTSolver(Solver):
         self.num_solutions = num_solutions
         self.k = 6
         self.accuracy_cutoff_pct = 10
-        self.cost = 0.0
 
     def _predict(
         self, demonstrations: list[Demonstration], solution: str
@@ -133,8 +113,13 @@ Please solve the following puzzle.
 {self.formatter.extra_helper_text(demonstrations)}
 """
 
-        raw_solutions, cost = self.generate(
-            prompt, system_prompt=system_prompt, n=self.num_solutions
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+
+        raw_solutions = self.model.generate_from_messages(
+            messages, n=self.num_solutions
         )
 
         solutions = []
@@ -143,8 +128,6 @@ Please solve the following puzzle.
                 solutions.append(raw_solution.split("```python")[1].split("```")[0])
             except Exception as e:
                 solutions.append(raw_solution)
-
-        self.cost += cost
 
         return solutions
 
@@ -282,12 +265,11 @@ Stderr:
             for i in ranks
         ]
 
-    def solve(self, demonstrations: list[Demonstration]) -> tuple[str, float]:
-        self.cost = 0
+    def solve(self, demonstrations: list[Demonstration]) -> str:
 
         # random.shuffle(demonstrations)
 
         solutions = self._get_solutions(demonstrations)
         _ = self._trace_predictions(demonstrations, solutions)
         ranked_solutions = self._rank_solutions(demonstrations, solutions)
-        return ranked_solutions[0]["page_content"], self.cost
+        return ranked_solutions[0]["page_content"]
