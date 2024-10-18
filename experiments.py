@@ -23,7 +23,7 @@ def num_examples_plot():
         model = ChatOpenAI(model="gpt-4o-mini")
         formatter = EmojisDemonstrations()
         solver = COTSolver(
-            model, formatter=formatter, num_examples=num_examples, num_solutions=4
+            model, formatter=formatter, num_examples=num_examples, k_initial=4
         )
         pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
         accuracy = evaluate(pipeline, n=2)
@@ -51,7 +51,7 @@ def num_solutions_plot():
         model = ChatOpenAI(model="gpt-4o-mini")
         formatter = EmojisDemonstrations()
         solver = COTSolver(
-            model, formatter=formatter, num_examples=8, num_solutions=num_solutions
+            model, formatter=formatter, num_examples=8, k_initial=num_solutions
         )
         pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
         accuracy = evaluate(pipeline, n=20)

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from base_prompt import BasePromptBuilder
+from base_prompt import BasePromptBuilder, FixPromptBuilder
 from demonstration_formatter import Demonstration, DemonstrationFormatter
 from examples import examples
 from run_program import run_program
@@ -9,6 +9,16 @@ from sklearn.cluster import KMeans  # type: ignore
 import random
 from llm import LLM
 from render import demonstrations_to_oai_content
+from dataclasses import dataclass
+import copy
+
+
+@dataclass
+class Solution:
+    solution: str
+    score: float
+    conversation: list
+    predictions: list[Demonstration]
 
 
 class Solver(ABC):
@@ -43,13 +53,16 @@ class COTSolver(Solver):
         model: LLM,
         formatter: DemonstrationFormatter,
         num_examples: int = 2,
-        num_solutions: int = 16,
+        k_initial: int = 16,
+        k: int = 6,
+        num_iterations: int = 2,
         pass_image: bool = False,
     ):
         super().__init__(model, formatter, num_examples)
-        self.num_solutions = num_solutions
-        self.k = 6
+        self.num_solutions = k_initial
+        self.k = k
         self.accuracy_cutoff_pct = 10
+        self.num_iterations = num_iterations
         self.pass_image = pass_image
 
     def _predict(
@@ -81,7 +94,9 @@ class COTSolver(Solver):
         log_nums = np.log(nums)
         return np.exp(log_nums.mean(axis=axis))
 
-    def _get_solutions(self, demonstrations: list[Demonstration]) -> list[str]:
+    def _get_initial_solutions(
+        self, demonstrations: list[Demonstration]
+    ) -> list[Solution]:
 
         formatted_demonstrations = self.formatter.format(demonstrations)
         system_prompt = self.base_prompt_builder.build(demonstrations)
@@ -130,158 +145,157 @@ I will also provide with an image of the demonstrations.
             },
         ]
 
-        raw_solutions = self.model.generate_from_messages(
-            messages, n=self.num_solutions
-        )
+        responses = self.model.generate_from_messages(messages, n=self.num_solutions)
 
         solutions = []
-        for raw_solution in raw_solutions:
+        for response in responses:
             try:
-                solutions.append(raw_solution.split("```python")[1].split("```")[0])
+                solution = response.split("```python")[1].split("```")[0]
             except Exception as e:
-                solutions.append(raw_solution)
+                solution = response
+
+            solutions.append(
+                Solution(
+                    solution,
+                    -1,
+                    messages
+                    + [
+                        {
+                            "role": "assistant",
+                            "content": response,
+                        }
+                    ],
+                    [],
+                )
+            )
 
         return solutions
 
-    @traceable(run_type="retriever", name="get_predictions")
-    def _trace_predictions(
-        self, demonstrations: list[Demonstration], solutions: list[str]
-    ) -> list[dict]:
-        """
-        Function is to better evaluate the solutions in LangSmith.
-        """
-        predictions = []
-        for solution in solutions:
-            preds = self._predict(demonstrations, solution)
-            formatted_preds = ""
-            for i, demonstration in enumerate(demonstrations):
-                pred, stdout, stderr = run_program(solution, demonstration.input)
-                formatted_preds += f"""
-Demonstration {i+1}:
-Input:
-{self.formatter.grid_to_text(demonstration.input)}
-
-Predicted Output:
-{self.formatter.grid_to_text(preds[i])}
-
-Actual Output:
-{self.formatter.grid_to_text(demonstration.output)}
-
-Stdout:
-{stdout}
-
-Stderr:
-{stderr}
-"""
-            predictions.append(formatted_preds)
-
-        return [
-            {
-                "page_content": predictions[i],
-                "type": "Document",
-                "metadata": {"index": i},
-            }
-            for i in range(len(predictions))
-        ]
-
-    def _get_diversity_matrix(self, predictions: list[list[np.ndarray]]) -> np.ndarray:
+    def _get_diversity_matrix(self, solutions: list[Solution]) -> np.ndarray:
         diversity_matrix = []
-        for preds in predictions:
+        for solution in solutions:
             row = []
-            for other_preds in predictions:
+            for other_solution in solutions:
                 inner_row = []
-                for i, pred in enumerate(preds):
-                    inner_row.append(self._hamming_distance(pred, other_preds[i]))
+                for i, pred in enumerate(solution.predictions):
+                    inner_row.append(
+                        self._hamming_distance(
+                            pred.output, other_solution.predictions[i].output
+                        )
+                    )
 
                 row.append(np.mean(inner_row))
             diversity_matrix.append(row)
 
         return np.array(diversity_matrix)
 
-    def _get_predictions(
-        self, demonstrations: list[Demonstration], solutions: list[str]
-    ) -> list[list[np.ndarray]]:
-        predictions = []
+    def _update_predictions(
+        self, demonstrations: list[Demonstration], solutions: list[Solution]
+    ) -> None:
         for solution in solutions:
-            preds = self._predict(demonstrations, solution)
-            predictions.append(preds)
+            preds = self._predict(demonstrations, solution.solution)
+            solution.predictions = [
+                Demonstration(demonstration.input, pred)
+                for demonstration, pred in zip(demonstrations, preds)
+            ]
 
-        return predictions
-
-    def _score_solutions(
-        self, demonstrations: list[Demonstration], predictions: list[list[np.ndarray]]
-    ) -> list[float]:
-        scores: list = []
-        for preds in predictions:
+    def _update_scores(
+        self, demonstrations: list[Demonstration], solutions: list[Solution]
+    ):
+        for solution in solutions:
             distances: list[float] = []
             for i, demonstration in enumerate(demonstrations):
-                pred = preds[i]
+                pred = solution.predictions[i]
                 truth = demonstration.output
-                distance = self._hamming_distance(truth, pred)
+                distance = self._hamming_distance(truth, pred.output)
                 distances.append(distance)
             score = np.mean(distances)
-            scores.append(score)
-
-        return scores
-
-    def _get_top_indices(self, scores: list[float]) -> list[int]:
-
-        cutoff = int(len(scores) * self.accuracy_cutoff_pct / 100)
-        top_models_indices = np.argsort(scores)[:cutoff]
-
-        return top_models_indices.tolist()
+            solution.score = float(score)
 
     @traceable(run_type="retriever", name="rank_solutions")
     def _rank_solutions(
-        self, demonstrations: list[Demonstration], solutions: list[str]
-    ) -> list[dict]:
+        self, demonstrations: list[Demonstration], solutions: list[Solution]
+    ) -> list[Solution]:
 
-        predictions = self._get_predictions(demonstrations, solutions)
-        scores = self._score_solutions(demonstrations, predictions)
+        self._update_predictions(demonstrations, solutions)
+        self._update_scores(demonstrations, solutions)
 
-        diverse_solutions: list[str] = []
-        diverse_scores: list[float] = []
+        # Sort solutions by score
+        solutions.sort(key=lambda x: x.score, reverse=False)
+
         if len(solutions) <= self.k:
-            diverse_solutions = solutions
-            diverse_scores = scores
-        else:
-            top_indices = self._get_top_indices(scores)
+            return solutions
 
-            top_predictions = [predictions[i] for i in top_indices]
-            top_solutions = [solutions[i] for i in top_indices]
-            top_scores = [scores[i] for i in top_indices]
+        cutoff = max(self.k, int(len(solutions) * self.accuracy_cutoff_pct / 100))
+        top_solutions = solutions[:cutoff]
 
-            diversity_matrix = self._get_diversity_matrix(top_predictions)
-            kmeans = KMeans(n_clusters=self.k, random_state=0).fit(diversity_matrix)
+        diversity_matrix = self._get_diversity_matrix(top_solutions)
+        kmeans = KMeans(n_clusters=self.k, random_state=0).fit(diversity_matrix)
 
-            for i in range(self.k):
-                cluster_indices = np.where(kmeans.labels_ == i)[0].astype(int)
-                cluster_solutions = [top_solutions[i] for i in cluster_indices]
-                cluster_scores = [top_scores[i] for i in cluster_indices]
-                if len(cluster_solutions) == 0 or len(cluster_scores) == 0:
-                    continue
+        diverse_solutions: list[Solution] = []
+        for i in range(self.k):
+            cluster_indices = np.where(kmeans.labels_ == i)[0].astype(int)
+            if len(cluster_indices) == 0:
+                continue
 
-                diverse_solutions.append(cluster_solutions[np.argmin(cluster_scores)])
-                diverse_scores.append(np.min(cluster_scores))
+            cluster_solutions: list[Solution] = [
+                top_solutions[i] for i in cluster_indices
+            ]
+            best_solution = min(cluster_solutions, key=lambda x: x.score)
+            diverse_solutions.append(best_solution)
 
-        ranks = np.argsort(diverse_scores)
-        return [
-            {
-                "page_content": diverse_solutions[i],
-                "type": "Document",
-                "metadata": {
-                    "score": diverse_scores[i],
-                    "index": i,
-                },
-            }
-            for i in ranks
-        ]
+        return diverse_solutions
+
+    def _fix_solutions(
+        self, demonstrations: list[Demonstration], solutions: list[Solution]
+    ) -> list[Solution]:
+
+        fixed_solutions = []
+
+        for solution in solutions:
+            prompt = FixPromptBuilder(self.formatter).build(
+                demonstrations, [pred.output for pred in solution.predictions]
+            )
+
+            new_conv = solution.conversation + [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+
+            responses = self.model.generate_from_messages(new_conv, n=self.k)
+            for response in responses:
+                try:
+                    new_solution = response.split("```python")[1].split("```")[0]
+                except Exception as e:
+                    new_solution = response
+
+                fixed_solutions.append(
+                    Solution(
+                        new_solution,
+                        -1,
+                        new_conv + [{"role": "assistant", "content": response}],
+                        [],
+                    )
+                )
+        return fixed_solutions
 
     def solve(self, demonstrations: list[Demonstration]) -> str:
 
         # random.shuffle(demonstrations)
 
-        solutions = self._get_solutions(demonstrations)
-        _ = self._trace_predictions(demonstrations, solutions)
-        ranked_solutions = self._rank_solutions(demonstrations, solutions)
-        return ranked_solutions[0]["page_content"]
+        solutions = self._get_initial_solutions(demonstrations)
+
+        best_solutions: list[Solution] = []
+        for i in range(self.num_iterations):
+            solutions += best_solutions
+            best_solutions = self._rank_solutions(demonstrations, solutions)
+
+            if i < self.num_iterations - 1:
+                solutions = self._fix_solutions(demonstrations, best_solutions)
+
+        # Sort solutions by score
+        best_solutions.sort(key=lambda x: x.score, reverse=False)
+
+        return best_solutions[0].solution

@@ -127,14 +127,23 @@ class Pipeline:
         return output["prediction"]
 
 
+# TODO: Fix beam search
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    model = GPT4(mini=True)
+    model = GPT4(mini=False)
     formatter: DemonstrationFormatter = EmojisDemonstrations()
     # formatter = RotateWrapper(formatter)
     formatter = ShapeExtractionWrapper(formatter)
     # formatter = DifferenceWrapper(formatter)
-    solver = COTSolver(model, formatter=formatter, num_examples=4, num_solutions=4)
+    solver = COTSolver(
+        model,
+        formatter=formatter,
+        num_examples=4,
+        k_initial=4,
+        k=2,
+        num_iterations=2,
+        pass_image=True,
+    )
 
     train = True
     id = "007bbfb7"

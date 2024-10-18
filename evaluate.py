@@ -47,7 +47,7 @@ if __name__ == "__main__":
     formatter: DemonstrationFormatter = EmojisDemonstrations()
     formatter = ShapeExtractionWrapper(formatter)
     formatter = DifferenceWrapper(formatter)
-    solver = COTSolver(model, formatter=formatter, num_examples=8, num_solutions=128)
+    solver = COTSolver(model, formatter=formatter, num_examples=8, k_initial=128)
     pipeline = Pipeline(demonstration_formatter=formatter, solver=solver)
     accuracy = evaluate(pipeline, n=50)
     print(f"Accuracy: {accuracy}")

@@ -1,4 +1,5 @@
 from demonstration_formatter import DemonstrationFormatter, Demonstration
+import numpy as np
 
 
 class BasePromptBuilder:
@@ -79,3 +80,57 @@ It is VERY IMPORTANT that you follow this pattern.
 The part "the could should be" is a bit more flexible.
 Here you should just use the reasoning that would make it easier to implement the transformation.
 """
+
+
+class FixPromptBuilder:
+    def __init__(self, formatter: DemonstrationFormatter):
+        self.formatter = formatter
+
+    def build(
+        self, demonstrations: list[Demonstration], outputs: list[np.ndarray]
+    ) -> str:
+
+        # Calculate how many examples were wrong
+        num_wrong = 0
+        for demonstration, output in zip(demonstrations, outputs):
+            if not np.array_equal(output, demonstration.output):
+                num_wrong += 1
+
+        prompt = f"""
+The `transform` function you implemented failed {num_wrong} out of {len(demonstrations)} demonstrations.
+
+Your task is to determine what the issue is and then fix the code.
+
+The issue could be a bug in the code and/or an issue with your previous understanding of the transformation rule.
+
+You'll need to carefully reason to determine the issue and to determine how to fix the code. Start your response by doing this reasoning in <reasoning></reasoning> tags.
+Then, implement the fixed transformation in code.
+
+Below, we show what the incorrect `transform` function outputs for each failed demonstration.
+"""
+
+        for i, (demonstration, output) in enumerate(zip(demonstrations, outputs)):
+            if not np.array_equal(output, demonstration.output):
+                prompt += f"""
+
+Demonstration {i+1}:
+
+Output:
+{self.formatter.grid_to_text(output)}
+
+Expected output:
+{self.formatter.grid_to_text(demonstration.output)}
+"""
+
+        prompt += """
+Your response should follow this format:
+<reasoning>
+Reasoning:
+...
+</reasoning>
+```python
+...
+```
+"""
+
+        return prompt
