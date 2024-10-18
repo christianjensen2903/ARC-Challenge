@@ -1,11 +1,7 @@
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
 from abc import ABC, abstractmethod
-from langchain_core.language_models.chat_models import BaseChatModel
 from base_prompt import BasePromptBuilder
 from demonstration_formatter import Demonstration, DemonstrationFormatter
 from examples import examples
-from langchain_community.callbacks.manager import get_openai_callback
-from langchain_core.language_models.chat_models import ChatGeneration
 from run_program import run_program
 import numpy as np
 from langsmith import traceable
@@ -122,7 +118,7 @@ I will also provide with an image of the the demonstrations.
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    demonstrations_to_oai_content(demonstrations),
+                    # demonstrations_to_oai_content(demonstrations),
                 ],
             },
         ]

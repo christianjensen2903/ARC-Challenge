@@ -132,7 +132,7 @@ if __name__ == "__main__":
     model = GPT4()
     formatter: DemonstrationFormatter = EmojisDemonstrations()
     # formatter = RotateWrapper(formatter)
-    # formatter = ShapeExtractionWrapper(formatter)
+    formatter = ShapeExtractionWrapper(formatter)
     # formatter = DifferenceWrapper(formatter)
     solver = COTSolver(model, formatter=formatter, num_examples=4, num_solutions=4)
 

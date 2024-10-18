@@ -133,6 +133,7 @@ The elements of the grid are separated by '|'.
 
 Locations are denoted like A7 or D3, where columns are denoted with A, B, C, etc. and rows are denoted with 1, 2, 3, etc.
 So, D3 corresponds to the cell in the 4th column and the 3rd row. Note that rows are 1-indexed.
+The bounds of a shape are shown as "A7-D3", which means the shape is from the 7th column of row A to the 3rd column of row D.
 """
 
 
@@ -210,42 +211,33 @@ class ShapeExtractionWrapper(DemonstrationFormatter):
         )
 
     def format(self, demonstrations: list[Demonstration]) -> str:
-        formatted_demonstrations = self.formatter.format(demonstrations)
+        return self.formatter.format(demonstrations)
+
+    def extra_helper_text(self, demonstrations: list[Demonstration]) -> str:
+        helper_text = self.formatter.get_description(demonstrations)
 
         # Only add shape information if there are few shapes
         for demonstration in demonstrations:
             if not self._few_shapes(demonstration.input, demonstration.output):
-                return formatted_demonstrations
+                return helper_text
 
-        formatted_demonstrations += "\n\n"
-        formatted_demonstrations += "Here are the shapes in the input and output:\n"
+        helper_text += "\n\n"
+        helper_text += (
+            "Here are some of the interesting shapes in the input and output:\n"
+        )
 
         for i, demonstration in enumerate(demonstrations):
-            input_shapes = self.shape_extractor.find_shapes(demonstration.input)
-            output_shapes = self.shape_extractor.find_shapes(demonstration.output)
-            formatted_demonstrations += f"Demonstration {i+1}:\n"
-            formatted_demonstrations += f"Input shapes:\n"
-            if len(input_shapes) == 0:
-                formatted_demonstrations += "No shapes found\n"
-            else:
-                for j, shape in enumerate(input_shapes):
-                    formatted_demonstrations += f"Shape {j+1}:\n"
-                    formatted_demonstrations += self.grid_to_text(shape.grid)
-                    formatted_demonstrations += "\n"
+            interesting_shapes = self.shape_extractor.find_interesting_shapes(
+                demonstration
+            )
+            helper_text += f"Demonstration {i+1}:\n"
+            helper_text += f"Input shapes:\n"
+            for j, (shape, description) in enumerate(interesting_shapes):
+                helper_text += f"Shape {j+1} - {description}:\n"
+                helper_text += self.grid_to_text(shape.grid)
+                helper_text += "\n"
 
-            formatted_demonstrations += "\n"
-            formatted_demonstrations += f"Output shapes:\n"
-            if len(output_shapes) == 0:
-                formatted_demonstrations += "No shapes found\n"
-            else:
-                for j, shape in enumerate(output_shapes):
-                    formatted_demonstrations += f"Shape {j+1}:\n"
-                    formatted_demonstrations += self.grid_to_text(shape.grid)
-                    formatted_demonstrations += "\n"
-
-            formatted_demonstrations += "\n"
-
-        return formatted_demonstrations
+        return helper_text
 
     def get_description(self, demonstrations: list[Demonstration]) -> str:
         prompt_extension = self.formatter.get_description(demonstrations)
@@ -253,12 +245,11 @@ class ShapeExtractionWrapper(DemonstrationFormatter):
             if not self._few_shapes(demonstration.input, demonstration.output):
                 return prompt_extension
         prompt_extension += """
-In addition to the grids, you will be shown the shapes in the input and output.
+In addition to the grids, you will be shown some of the possibly interesting shapes in the input and output.
 A shape can both be a contiguous region of a single color, or a mix of multiple colors.
-We will also not show you any shapes consisting of less than 2 cells to save on space.
-We will also not show you shapes that are identical to the whole grid as these are trivially easy to detect.
+We will show you shapes that present in both the input and output and how they have changed.
 
-We will show you the shapes in a "normalized" form.
+We will show the shapes in a "normalized" form.
 This shows the shape with the coordinates shifted such that the minimum row/column of the shape is row 1 and column A.
 This is useful for tasks like noticing identical shapes (in different positions with different colors).
 
