@@ -6,6 +6,7 @@ import logging
 from demonstration_formatter import (
     Demonstration,
     DemonstrationFormatter,
+    ASCIIDemonstrations,
     EmojisDemonstrations,
     ShapeExtractionWrapper,
     DifferenceWrapper,
@@ -54,8 +55,8 @@ class Pipeline:
         process_outputs=lambda x: {
             "demonstrations": [
                 {
-                    "input": EmojisDemonstrations().grid_to_text(demonstration.input),
-                    "output": EmojisDemonstrations().grid_to_text(demonstration.output),
+                    "input": ASCIIDemonstrations().grid_to_text(demonstration.input),
+                    "output": ASCIIDemonstrations().grid_to_text(demonstration.output),
                 }
                 for demonstration in x
             ]
@@ -81,7 +82,7 @@ class Pipeline:
     @traceable(
         name="run_program",
         process_outputs=lambda x: {
-            "prediction": EmojisDemonstrations().grid_to_text(x["prediction"]),
+            "prediction": ASCIIDemonstrations().grid_to_text(x["prediction"]),
             "stdout": x["stdout"],
             "stderr": x["stderr"],
         },
@@ -105,8 +106,8 @@ class Pipeline:
     @traceable(
         name="load_test_demonstration",
         process_outputs=lambda x: {
-            "input": EmojisDemonstrations().grid_to_text(x.input),
-            "output": EmojisDemonstrations().grid_to_text(x.output),
+            "input": ASCIIDemonstrations().grid_to_text(x.input),
+            "output": ASCIIDemonstrations().grid_to_text(x.output),
         },
     )
     def _load_test_demonstration(self, id: str) -> Demonstration:
@@ -131,18 +132,18 @@ class Pipeline:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     model = GPT4(mini=False)
-    formatter: DemonstrationFormatter = EmojisDemonstrations()
+    formatter: DemonstrationFormatter = ASCIIDemonstrations()
     # formatter = RotateWrapper(formatter)
     formatter = ShapeExtractionWrapper(formatter)
     # formatter = DifferenceWrapper(formatter)
     solver = COTSolver(
         model,
         formatter=formatter,
-        num_examples=8,
+        num_examples=4,
         k_initial=4,
         k=2,
-        num_iterations=4,
-        pass_image=True,
+        num_iterations=2,
+        pass_image=False,
     )
 
     train = True
