@@ -9,8 +9,15 @@ class Demonstration:
 
 
 @dataclass
+class Step:
+    demonstration_index: int
+    reasoning: str
+    hypothesis: str
+    code: str
+
+
+@dataclass
 class Example:
     id: str
-    reasoning: str
-    code: str
+    steps: list[Step]
     demonstrations: list[Demonstration]
