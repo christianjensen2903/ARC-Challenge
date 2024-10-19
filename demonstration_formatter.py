@@ -143,7 +143,7 @@ class ASCIIDemonstrations(DemonstrationFormatter):
     """
 
     def char_to_text(self, char: int) -> str:
-        return str(char) if char > 0 else "/"
+        return str(char) if char > 0 else " "
 
     def _get_column_names(self, width: int) -> str:
         column_names = "    "
@@ -197,7 +197,7 @@ The inputs and outputs are each "grids". A grid is a rectangular matrix of integ
 These grids will be shown to you as an ASCII representation.
 
 The elements of the grid are separated by '|'.
-All 0s are shown as / as these represent empty locations.
+All 0s are shown as spaces as these represent empty locations (grey).
 
 All integers represent a color. The mapping is as follows:
 {self.color_lookup}

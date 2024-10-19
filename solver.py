@@ -18,7 +18,7 @@ class Solution:
     solution: str
     score: float
     conversation: list
-    predictions: list[Demonstration]
+    predictions: list[np.ndarray | str]
 
 
 class Solver(ABC):
@@ -67,14 +67,17 @@ class COTSolver(Solver):
 
     def _predict(
         self, demonstrations: list[Demonstration], solution: str
-    ) -> list[np.ndarray]:
+    ) -> list[np.ndarray | str]:
         """
         Predicts the output of each demonstration
         """
-        predictions = []
+        predictions: list[np.ndarray | str] = []
         for demonstration in demonstrations:
-            pred, _, _ = run_program(solution, demonstration.input)
-            predictions.append(pred)
+            pred, _, error = run_program(solution, demonstration.input)
+            if error:
+                predictions.append(error)
+            else:
+                predictions.append(pred)
 
         return predictions
 
@@ -86,13 +89,6 @@ class COTSolver(Solver):
             return 1.0
 
         return float(np.mean(x != y))
-
-    def _geometric_mean(self, nums: np.ndarray, axis=None) -> float:
-        # Check for any non-positive numbers
-        assert (nums > 0).all()
-
-        log_nums = np.log(nums)
-        return np.exp(log_nums.mean(axis=axis))
 
     def _get_initial_solutions(
         self, demonstrations: list[Demonstration]
@@ -178,11 +174,25 @@ I will also provide with an image of the demonstrations.
             for other_solution in solutions:
                 inner_row = []
                 for i, pred in enumerate(solution.predictions):
-                    inner_row.append(
-                        self._hamming_distance(
-                            pred.output, other_solution.predictions[i].output
+
+                    if isinstance(pred, str) and isinstance(
+                        other_solution.predictions[i], np.ndarray
+                    ):
+                        distance = 1.0
+                    elif isinstance(pred, np.ndarray) and isinstance(
+                        other_solution.predictions[i], str
+                    ):
+                        distance = 1.0
+                    elif isinstance(pred, str) and isinstance(
+                        other_solution.predictions[i], str
+                    ):
+                        distance = 0.0
+                    else:
+                        distance = self._hamming_distance(
+                            pred, other_solution.predictions[i]  # type: ignore
                         )
-                    )
+
+                    inner_row.append(distance)
 
                 row.append(np.mean(inner_row))
             diversity_matrix.append(row)
@@ -193,11 +203,7 @@ I will also provide with an image of the demonstrations.
         self, demonstrations: list[Demonstration], solutions: list[Solution]
     ) -> None:
         for solution in solutions:
-            preds = self._predict(demonstrations, solution.solution)
-            solution.predictions = [
-                Demonstration(demonstration.input, pred)
-                for demonstration, pred in zip(demonstrations, preds)
-            ]
+            solution.predictions = self._predict(demonstrations, solution.solution)
 
     def _update_scores(
         self, demonstrations: list[Demonstration], solutions: list[Solution]
@@ -207,7 +213,10 @@ I will also provide with an image of the demonstrations.
             for i, demonstration in enumerate(demonstrations):
                 pred = solution.predictions[i]
                 truth = demonstration.output
-                distance = self._hamming_distance(truth, pred.output)
+                if isinstance(pred, str):
+                    distance = 1.0
+                else:
+                    distance = self._hamming_distance(truth, pred)
                 distances.append(distance)
             score = np.mean(distances)
             solution.score = float(score)
@@ -254,7 +263,7 @@ I will also provide with an image of the demonstrations.
 
         for solution in solutions:
             prompt = FixPromptBuilder(self.formatter).build(
-                demonstrations, [pred.output for pred in solution.predictions]
+                demonstrations, solution.predictions
             )
 
             new_conv = solution.conversation + [

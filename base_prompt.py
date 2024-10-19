@@ -87,13 +87,15 @@ class FixPromptBuilder:
         self.formatter = formatter
 
     def build(
-        self, demonstrations: list[Demonstration], outputs: list[np.ndarray]
+        self, demonstrations: list[Demonstration], outputs: list[np.ndarray | str]
     ) -> str:
 
         # Calculate how many examples were wrong
         num_wrong = 0
         for demonstration, output in zip(demonstrations, outputs):
-            if not np.array_equal(output, demonstration.output):
+            if isinstance(output, str) or not np.array_equal(
+                output, demonstration.output
+            ):
                 num_wrong += 1
 
         prompt = f"""
@@ -116,7 +118,7 @@ Below, we show what the incorrect `transform` function outputs for each failed d
 Demonstration {i+1}:
 
 Output:
-{self.formatter.grid_to_text(output)}
+{self.formatter.grid_to_text(output) if isinstance(output, np.ndarray) else output}
 
 Expected output:
 {self.formatter.grid_to_text(demonstration.output)}
