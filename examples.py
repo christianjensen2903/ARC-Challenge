@@ -27,7 +27,7 @@ How do we figure out if it's top to bottom or left to right based on the input?
 We can see if we look at the top row of the input. If it consist of 1 color it's top to bottom. If it consist of 2 or more colors it's left to right.
 
 Hypothesis:
-The output are the distinct colors in the input ordered from either top to bottom or left to right depending on how many colors the top row consists of.
+The output are the distinct colors in the input in the same order as they appear in the input.
 
 **Demonstration 3**
 Reasoning:
@@ -37,7 +37,7 @@ Hypothesis:
 No changes from the previous demonstration.
 
 Final theory:
-The output are the distinct colors in the input ordered from either top to bottom or left to right depending on how many colors the top row consists of.
+The output are the distinct colors in the input in the same order as they appear in the input.
 
 The code should:
 1. Look at the top row of the input to determine left to right or top to bottom.
@@ -46,30 +46,19 @@ The code should:
 """,
         code="""
 def transform(grid: np.ndarray) -> np.ndarray:
-    # Identify if the ordering of colors is from left to right or top to bottom.
-    left_column = grid[:, 0]
-    top_row = grid[0, :]
-    # Get distinct values
-    left_column_values = list(dict.fromkeys(left_column))
-    top_row_values = list(dict.fromkeys(top_row))
-    if len(top_row_values) == 1:
-        # Ordering is from left to right
-        left_to_right = False
+    # Find colors left to right
+    first_row = grid[0, :]
+    unique_values, indices = np.unique(first_row, return_index=True)
+    if len(unique_values) == 1:
+        # Top to bottom
+        first_col = grid[:, 0]
+        unique_values, indices = np.unique(first_col, return_index=True)
+        ordering = unique_values[np.argsort(indices)]
+        return np.expand_dims(ordering, axis=1)
     else:
-        # Ordering is from top to bottom
-        left_to_right = True
-    # Get the colors of the segments
-    if left_to_right:
-        # Get the colors of the segments
-        colors = top_row_values
-    else:
-        # Get the colors of the segments
-        colors = left_column_values
-    # Output the colors in the correct ordering
-    output = np.array([colors])
-    if not left_to_right:
-        output = output.T
-    return output
+        # Left to right
+        ordering = unique_values[np.argsort(indices)]
+        return np.expand_dims(ordering, axis=0)
     """,
         demonstrations=[],
     ),
@@ -98,7 +87,7 @@ Both rules seems to apply and seems like logical rules.
 We will choose the second rule since it seems to be a more destinct pattern.
 
 Hypothesis:
-The purple shapes are filled with the shapes that have a distinct color.
+The purple shapes are filled with the shapes that have a distinct color and are the same size as the "hole" in the purple shape.
 
 **Demonstration 2**
 Reasoning:
@@ -115,7 +104,7 @@ Hypothesis:
 No changes from the previous demonstration.
 
 Final theory:
-The purple shapes are filled with the shapes that have a distinct color.
+The purple shapes are filled with the shapes that have a distinct color and are the same size as the "hole" in the purple shape.
 
 The code should at high level:
 1. Identify the two shapes with distinct colors.
@@ -221,7 +210,7 @@ We however also see a new shape is added to the output. This seems to be the ref
 So it seems that the output is the same as the input but where the white shape is reflected to the left aswell.
 
 Hypothesis:
-The output is the same as the input but the white shape is reflected to the left.
+The output is the same as the input but a copy of the white shape is added and reflected to the left.
 
 **Demonstration 2**
 Reasoning:
@@ -235,7 +224,7 @@ If we look at the second demonstration the left side is 2 cells and the right si
 It could then be that it is reflected on the side with the shortest length.
 
 Hypothesis:
-The output is the same as the input but the white shape is reflected to either the left or right depending on which side is the shortest of the white shape.
+The output is the same as the input but a copy of the white shape is added and reflected to the to the side of the white shape with the shortest length.
 
 **Demonstration 3**
 Reasoning:
@@ -256,10 +245,10 @@ This time the yellow shape has a length of 2 cells on the left side and 1 cell o
 Our theory therefore still holds.
 
 Hypothesis:
-The output is the same as the input but the white shape is reflected to either the left or right depending on which side is the shortest of the yellow shape.
+The output is the same as the input but a copy of the white shape is added and reflected to the side of the yellow shape with the longest length.
 
 Final theory:
-The output is the same as the input but the white shape is reflected to either the left or right depending on which side is the shortest of the yellow shape.
+The output is the same as the input but a copy of the white shape is added and reflected to the side of the yellow shape with the longest length.
 
 The code should:
 1. Copy the input grid to the output grid
@@ -268,33 +257,32 @@ The code should:
 4. Reflect the white shape based on the longest side of the yellow shape
     """,
         code="""
-def normalize_shape(shape: np.ndarray) -> np.ndarray:
-    min_row, min_col = np.min(shape, axis=0)
-    return shape - [min_row, min_col]
-
-
 def transform(grid: np.ndarray) -> np.ndarray:
     # Copy the input grid to the output grid
     output_grid = grid.copy()
+    # Identify the white shape
+    white_shape = np.argwhere(grid == 8)
 
-    # Identify the yellow shape
+    # Find the bounding box of the white shape
+    min_row, min_col = np.min(white_shape, axis=0)
+    max_row, max_col = np.max(white_shape, axis=0)
+    white_shape_grid = grid[min_row:max_row+1, min_col:max_col+1]
+
+    # Flip the white shape horizontally
+    flipped_white_shape_grid = np.flip(white_shape_grid, axis=1)
+    flipped_white_shape = np.argwhere(flipped_white_shape_grid == 8)
+
     yellow_shape = np.argwhere(grid == 4)
-
-    # Identify the longest side of the yellow shape
     _, side_lengths = np.unique(yellow_shape[:, 1], return_counts=True)
-
     left_is_longer = side_lengths[0] > side_lengths[-1]
 
-    # Reflect the white shape based on the longest side of the yellow shape
-    white_shape = np.argwhere(grid == 8)
-    flipped_white_shape = np.flip(white_shape, axis=0)
-    normalized_flipped_white_shape = normalize_shape(flipped_white_shape)
+    # Place the flipped white shape in the output grid
+    for y, x in flipped_white_shape:
 
-    for x, y in normalized_flipped_white_shape:
         if left_is_longer:
-            output_grid[x, y] = 8
+            output_grid[y, x] = 8
         else:
-            output_grid[x, y + 6] = 8
+            output_grid[y, x+6] = 8
 
     return output_grid
     """,

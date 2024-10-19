@@ -127,7 +127,7 @@ class Pipeline:
         return output["prediction"]
 
 
-# TODO: Fix beam search
+# TODO: Give error message if program fails
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     model = GPT4(mini=False)
@@ -138,10 +138,10 @@ if __name__ == "__main__":
     solver = COTSolver(
         model,
         formatter=formatter,
-        num_examples=4,
+        num_examples=8,
         k_initial=4,
         k=2,
-        num_iterations=2,
+        num_iterations=4,
         pass_image=True,
     )
 

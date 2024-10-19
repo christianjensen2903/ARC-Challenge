@@ -292,6 +292,10 @@ I will also provide with an image of the demonstrations.
             solutions += best_solutions
             best_solutions = self._rank_solutions(demonstrations, solutions)
 
+            print(
+                f"Scores after iteration {i}: {[sol.score for sol in best_solutions]}"
+            )
+
             if i < self.num_iterations - 1:
                 solutions = self._fix_solutions(demonstrations, best_solutions)
 
