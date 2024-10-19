@@ -145,16 +145,25 @@ class ASCIIDemonstrations(DemonstrationFormatter):
     def char_to_text(self, char: int) -> str:
         return str(char) if char > 0 else " "
 
+    def _get_column_names(self, width: int) -> str:
+        column_names = "    "
+        for i in range(width):
+            column_names += self.column_names[i]
+            column_names += " "
+        return column_names
+
     def grid_to_text(self, grid: np.ndarray) -> str:
         height, width = grid.shape
-        grid_str = "    " + " ".join(self.column_names[:width]) + "\n"
+        grid_str = self._get_column_names(width)
+        grid_str += "\n"
 
         for i, row in enumerate(grid):
             text_row = self.row_names[i] + ("  " if i < 9 else " ") + "|"
             for value in row:
                 char = self.char_to_text(value)
                 text_row += f"{char}|"
-            grid_str += text_row + "\n"
+            grid_str += text_row + " " + self.row_names[i] + "\n"
+        grid_str += self._get_column_names(width)
 
         return grid_str
 
@@ -170,12 +179,28 @@ class ASCIIDemonstrations(DemonstrationFormatter):
         return formatted_demonstrations
 
     def get_description(self, demonstrations: list[Demonstration]) -> str:
-        return """
+
+        self.color_lookup = {
+            0: "Grey",
+            1: "Red",
+            2: "Green",
+            3: "Blue",
+            4: "Yellow",
+            5: "Purple",
+            6: "Black",
+            7: "Orange",
+            8: "White",
+            9: "Brown",
+        }
+        return f"""
 The inputs and outputs are each "grids". A grid is a rectangular matrix of integers between 0 and 9 (inclusive).
 These grids will be shown to you as an ASCII representation.
 
 The elements of the grid are separated by '|'.
-All 0s are shown as spaces as these represent empty locations.
+All 0s are shown as a space as these represent empty locations.
+
+All integers represent a color. The mapping is as follows:
+{self.color_lookup}
 
 Locations are denoted like A7 or D3, where columns are denoted with A, B, C, etc. and rows are denoted with 1, 2, 3, etc.
 So, D3 corresponds to the cell in the 4th column and the 3rd row. Note that rows are 1-indexed.
